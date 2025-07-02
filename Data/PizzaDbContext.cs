@@ -1,0 +1,106 @@
+using Microsoft.EntityFrameworkCore;
+using PizzaCoreAPI.Models;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
+using System.Linq;
+
+namespace PizzaCoreAPI.Data
+{
+    public class PizzaDbContext : IdentityDbContext<Usuario, Rol, string>
+    {
+        public PizzaDbContext(DbContextOptions<PizzaDbContext> options)
+            : base(options)
+        {
+        }
+
+        public DbSet<Producto> Productos { get; set; }
+        public DbSet<Ingrediente> Ingredientes { get; set; }
+        public DbSet<Menu> Menus { get; set; }
+        public DbSet<Usuario> Usuarios { get; set; }
+        public DbSet<Pedido> Pedidos { get; set; }
+        public DbSet<PedidoDetalle> PedidoDetalles { get; set; }
+        public DbSet<Factura> Facturas { get; set; }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+
+            modelBuilder.Entity<Producto>()
+                .HasMany(p => p.Ingredientes)
+                .WithMany(i => i.Productos)
+                .UsingEntity(j => j.ToTable("ProductoIngredientes"));
+
+            modelBuilder.Entity<Menu>()
+                .HasMany(m => m.Productos)
+                .WithMany(p => p.Menus)
+                .UsingEntity(j => j.ToTable("MenuProductos"));
+
+            modelBuilder.Entity<PedidoDetalle>()
+                .HasOne(d => d.Producto)
+                .WithMany(p => p.PedidoDetalles)
+                .HasForeignKey(d => d.ProductoId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<Pedido>()
+                .HasOne(p => p.Cliente)
+                .WithMany(c => c.Pedidos)
+                .HasForeignKey(p => p.ClienteId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Pedido>()
+                .HasOne(p => p.Empleado)
+                .WithMany(u => u.PedidosEmpleado)
+                .HasForeignKey(p => p.EmpleadoId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Pedido>()
+                .Property(p => p.Id)
+                .HasConversion<string>();
+
+            modelBuilder.Entity<PedidoDetalle>()
+                .HasOne(pd => pd.Pedido)
+                .WithMany(p => p.Detalles)
+                .HasForeignKey(pd => pd.PedidoId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<PedidoDetalle>()
+                .HasOne(pd => pd.Producto)
+                .WithMany(p => p.PedidoDetalles)
+                .HasForeignKey(pd => pd.ProductoId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Configuración de precios con precisión
+            modelBuilder.Entity<Producto>()
+                .Property(p => p.Precio)
+                .HasPrecision(18, 2);
+
+            modelBuilder.Entity<Ingrediente>()
+                .Property(i => i.PrecioAdicional)
+                .HasPrecision(18, 2);
+
+            modelBuilder.Entity<Pedido>()
+                .Property(p => p.Total)
+                .HasPrecision(18, 2);
+
+            modelBuilder.Entity<PedidoDetalle>()
+                .Property(pd => pd.PrecioUnitario)
+                .HasPrecision(18, 2);
+
+            modelBuilder.Entity<PedidoDetalle>()
+                .Property(pd => pd.Subtotal)
+                .HasPrecision(18, 2);
+
+            modelBuilder.Entity<Factura>()
+                .Property(f => f.Subtotal)
+                .HasPrecision(18, 2);
+
+            modelBuilder.Entity<Factura>()
+                .Property(f => f.IVA)
+                .HasPrecision(18, 2);
+
+            modelBuilder.Entity<Factura>()
+                .Property(f => f.Total)
+                .HasPrecision(18, 2);
+        }
+    }
+}
