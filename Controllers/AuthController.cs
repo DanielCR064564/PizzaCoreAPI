@@ -1,9 +1,16 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
+using Microsoft.IdentityModel.Tokens;
 using PizzaCoreAPI.Data;
 using PizzaCoreAPI.Models;
-using System.Threading.Tasks;
+using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
+using System.Threading.Tasks;
 
 namespace PizzaCoreAPI.Controllers
 {
@@ -14,15 +21,18 @@ namespace PizzaCoreAPI.Controllers
         private readonly UserManager<Usuario> _userManager;
         private readonly SignInManager<Usuario> _signInManager;
         private readonly RoleManager<Rol> _roleManager;
+        private readonly IConfiguration _configuration;
 
         public AuthController(
             UserManager<Usuario> userManager,
             SignInManager<Usuario> signInManager,
-            RoleManager<Rol> roleManager)
+            RoleManager<Rol> roleManager,
+            IConfiguration configuration)
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _roleManager = roleManager;
+            _configuration = configuration;
         }
 
         [HttpPost("RegisterCliente")]
@@ -66,7 +76,7 @@ namespace PizzaCoreAPI.Controllers
             {
                 if (string.IsNullOrEmpty(usuario.RNC))
                     return BadRequest(new { message = "El campo RNC es requerido para empleados" });
-                
+
                 if (string.IsNullOrEmpty(usuario.Cargo))
                     return BadRequest(new { message = "El campo Cargo es requerido para empleados" });
 
@@ -74,8 +84,9 @@ namespace PizzaCoreAPI.Controllers
                     return BadRequest(new { message = "El nombre de usuario ya existe" });
 
                 var password = usuario.PasswordHash;
+
                 var result = await _userManager.CreateAsync(usuario, password);
-                
+
                 if (result.Succeeded)
                 {
                     usuario.EsEmpleado = true;
@@ -175,10 +186,33 @@ namespace PizzaCoreAPI.Controllers
 
         private async Task<string> GenerateJwtToken(Usuario user)
         {
-            if (user == null)
-                throw new ArgumentNullException(nameof(user));
+            var roles = await _userManager.GetRolesAsync(user);
 
-            return await Task.FromResult("token_jwt_generado");
+            var claims = new List<Claim>
+            {
+                new Claim(JwtRegisteredClaimNames.Sub, user.UserName),
+                new Claim(ClaimTypes.NameIdentifier, user.Id),
+                new Claim(ClaimTypes.Email, user.Email ?? ""),
+                new Claim("nombreCompleto", user.NombreCompleto ?? "")
+            };
+
+            foreach (var role in roles)
+            {
+                claims.Add(new Claim(ClaimTypes.Role, role));
+            }
+
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["JwtSettings:SecretKey"]));
+            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+            var token = new JwtSecurityToken(
+                issuer: _configuration["JwtSettings:Issuer"],
+                audience: _configuration["JwtSettings:Audience"],
+                claims: claims,
+                expires: DateTime.UtcNow.AddHours(2),
+                signingCredentials: creds
+            );
+
+            return new JwtSecurityTokenHandler().WriteToken(token);
         }
 
         public class LoginModel
