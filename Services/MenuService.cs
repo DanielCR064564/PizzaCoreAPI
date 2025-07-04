@@ -47,7 +47,7 @@ namespace PizzaCoreAPI.Services
             }).ToList();
         }
 
-        public async Task<MenuDTO> GetMenuByIdAsync(int id)
+        public async Task<MenuDTO> GetMenuByIdAsync(Guid id)
         {
             var menu = await _context.Menus
                 .Include(m => m.Productos)
@@ -119,7 +119,7 @@ namespace PizzaCoreAPI.Services
             };
         }
 
-        public async Task UpdateMenuAsync(int id, CrearMenuDTO menuDto)
+        public async Task UpdateMenuAsync(Guid id, CrearMenuDTO menuDto)
         {
             var menu = await _context.Menus.FindAsync(id);
             if (menu == null)
@@ -143,7 +143,7 @@ namespace PizzaCoreAPI.Services
             await _context.SaveChangesAsync();
         }
 
-        public async Task DeleteMenuAsync(int id)
+        public async Task DeleteMenuAsync(Guid id)
         {
             var menu = await _context.Menus.FindAsync(id);
             if (menu != null)
@@ -180,7 +180,7 @@ namespace PizzaCoreAPI.Services
             }).ToList();
         }
 
-        public async Task<decimal> CalcularPrecioMenuAsync(int menuId)
+        public async Task<decimal> CalcularPrecioMenuAsync(Guid menuId)
         {
             var menu = await _context.Menus
                 .Include(m => m.Productos)
@@ -192,7 +192,7 @@ namespace PizzaCoreAPI.Services
             return menu.Productos.Sum(p => p.Precio);
         }
 
-        public async Task<bool> VerificarDisponibilidadMenuAsync(int menuId)
+        public async Task<bool> VerificarDisponibilidadMenuAsync(Guid menuId)
         {
             var menu = await _context.Menus
                 .Include(m => m.Productos)

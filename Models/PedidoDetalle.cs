@@ -5,15 +5,15 @@ namespace PizzaCoreAPI.Models
 {
     public class PedidoDetalle
     {
-        public int Id { get; set; }
+        public string Id { get; set; } = string.Empty;
 
         [Required]
-        public int PedidoId { get; set; }
+        public string PedidoId { get; set; } = string.Empty;
 
         [Required]
-        public int ProductoId { get; set; }
+        public Guid ProductoId { get; set; }
 
-        public int Cantidad { get; set; }
+        public string Cantidad { get; set; } = "1";
         public decimal PrecioUnitario { get; set; }
         public decimal Subtotal { get; set; }
 

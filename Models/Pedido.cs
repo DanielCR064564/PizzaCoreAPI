@@ -7,13 +7,12 @@ namespace PizzaCoreAPI.Models
 {
     public class Pedido
     {
-        public int Id { get; set; }
+        public string Id { get; set; } = string.Empty;
 
         [Required]
         public string ClienteId { get; set; } = string.Empty;
 
-        [Required]
-        public string EmpleadoId { get; set; } = string.Empty;
+        public string? EmpleadoId { get; set; }
 
         [Required]
         public DateTime FechaPedido { get; set; } = DateTime.Now;

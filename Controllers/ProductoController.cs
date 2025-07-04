@@ -33,7 +33,7 @@ namespace PizzaCoreAPI.Controllers
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<ProductoDTO>> GetProducto(int id)
+        public async Task<ActionResult<ProductoDTO>> GetProducto(Guid id)
         {
             var producto = await _productoService.GetProductoByIdAsync(id);
             if (producto == null)
@@ -49,28 +49,28 @@ namespace PizzaCoreAPI.Controllers
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateProducto(int id, CrearProductoDTO productoDto)
+        public async Task<IActionResult> UpdateProducto(Guid id, CrearProductoDTO productoDto)
         {
             await _productoService.UpdateProductoAsync(id, productoDto);
             return NoContent();
         }
 
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteProducto(int id)
+        public async Task<IActionResult> DeleteProducto(Guid id)
         {
             await _productoService.DeleteProductoAsync(id);
             return NoContent();
         }
 
         [HttpGet("{id}/precio")]
-        public async Task<ActionResult<decimal>> CalcularPrecio(int id, [FromQuery] List<int> ingredientesIds)
+        public async Task<ActionResult<decimal>> CalcularPrecio(Guid id, [FromQuery] List<Guid> ingredientesIds)
         {
             var precio = await _productoService.CalcularPrecioConIngredientesAsync(id, ingredientesIds);
             return Ok(precio);
         }
 
         [HttpGet("{id}/disponibilidad")]
-        public async Task<ActionResult<bool>> VerificarDisponibilidad(int id)
+        public async Task<ActionResult<bool>> VerificarDisponibilidad(Guid id)
         {
             var disponible = await _productoService.VerificarDisponibilidadAsync(id);
             return Ok(disponible);

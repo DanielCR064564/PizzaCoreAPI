@@ -12,7 +12,7 @@ namespace PizzaCoreAPI.Models
 
     public class Producto
     {
-        public int Id { get; set; }
+        public Guid Id { get; set; } = Guid.NewGuid();
 
         [Required]
         public string Nombre { get; set; } = string.Empty;

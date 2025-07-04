@@ -8,12 +8,12 @@ namespace PizzaCoreAPI.Interfaces
     public interface IMenuService
     {
         Task<List<MenuDTO>> GetAllMenusAsync();
-        Task<MenuDTO> GetMenuByIdAsync(int id);
+        Task<MenuDTO> GetMenuByIdAsync(Guid id);
         Task<MenuDTO> CreateMenuAsync(CrearMenuDTO menuDto);
-        Task UpdateMenuAsync(int id, CrearMenuDTO menuDto);
-        Task DeleteMenuAsync(int id);
+        Task UpdateMenuAsync(Guid id, CrearMenuDTO menuDto);
+        Task DeleteMenuAsync(Guid id);
         Task<List<MenuDTO>> GetMenusActivosAsync();
-        Task<decimal> CalcularPrecioMenuAsync(int menuId);
-        Task<bool> VerificarDisponibilidadMenuAsync(int menuId);
+        Task<decimal> CalcularPrecioMenuAsync(Guid menuId);
+        Task<bool> VerificarDisponibilidadMenuAsync(Guid menuId);
     }
 }

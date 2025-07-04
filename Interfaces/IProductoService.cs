@@ -8,12 +8,12 @@ namespace PizzaCoreAPI.Interfaces
     public interface IProductoService
     {
         Task<List<ProductoDTO>> GetAllProductosAsync();
-        Task<ProductoDTO> GetProductoByIdAsync(int id);
+        Task<ProductoDTO> GetProductoByIdAsync(Guid id);
         Task<ProductoDTO> CreateProductoAsync(CrearProductoDTO productoDto);
-        Task UpdateProductoAsync(int id, CrearProductoDTO productoDto);
-        Task DeleteProductoAsync(int id);
+        Task UpdateProductoAsync(Guid id, CrearProductoDTO productoDto);
+        Task DeleteProductoAsync(Guid id);
         Task<List<ProductoDTO>> GetProductosDisponiblesAsync();
-        Task<decimal> CalcularPrecioConIngredientesAsync(int productoId, List<int> ingredientesIds);
-        Task<bool> VerificarDisponibilidadAsync(int productoId);
+        Task<decimal> CalcularPrecioConIngredientesAsync(Guid productoId, List<Guid> ingredientesIds);
+        Task<bool> VerificarDisponibilidadAsync(Guid productoId);
     }
 }

@@ -44,7 +44,7 @@ namespace PizzaCoreAPI.Services
             }).ToList();
         }
 
-        public async Task<ProductoDTO> GetProductoByIdAsync(int id)
+        public async Task<ProductoDTO> GetProductoByIdAsync(Guid id)
         {
             var producto = await _context.Productos
                 .Include(p => p.Ingredientes)
@@ -87,7 +87,7 @@ namespace PizzaCoreAPI.Services
             if (productoDto.IngredientesIds != null && productoDto.IngredientesIds.Any())
             {
                 var ingredientes = await _context.Ingredientes
-                    .Where(i => productoDto.IngredientesIds.Contains(i.Id))
+                    .Where(i => productoDto.IngredientesIds.Contains(Guid.Parse(i.Id.ToString())))
                     .ToListAsync();
                 producto.Ingredientes = ingredientes;
             }
@@ -114,7 +114,7 @@ namespace PizzaCoreAPI.Services
             };
         }
 
-        public async Task UpdateProductoAsync(int id, CrearProductoDTO productoDto)
+        public async Task UpdateProductoAsync(Guid id, CrearProductoDTO productoDto)
         {
             var producto = await _context.Productos.FindAsync(id);
             if (producto == null)
@@ -130,7 +130,7 @@ namespace PizzaCoreAPI.Services
             if (productoDto.IngredientesIds != null && productoDto.IngredientesIds.Any())
             {
                 var ingredientes = await _context.Ingredientes
-                    .Where(i => productoDto.IngredientesIds.Contains(i.Id))
+                    .Where(i => productoDto.IngredientesIds.Contains(Guid.Parse(i.Id.ToString())))
                     .ToListAsync();
                 producto.Ingredientes = ingredientes;
             }
@@ -138,7 +138,7 @@ namespace PizzaCoreAPI.Services
             await _context.SaveChangesAsync();
         }
 
-        public async Task DeleteProductoAsync(int id)
+        public async Task DeleteProductoAsync(Guid id)
         {
             var producto = await _context.Productos.FindAsync(id);
             if (producto != null)
@@ -174,7 +174,7 @@ namespace PizzaCoreAPI.Services
             }).ToList();
         }
 
-        public async Task<decimal> CalcularPrecioConIngredientesAsync(int productoId, List<int> ingredientesIds)
+        public async Task<decimal> CalcularPrecioConIngredientesAsync(Guid productoId, List<Guid> ingredientesIds)
         {
             var producto = await _context.Productos.FindAsync(productoId);
             if (producto == null)
@@ -182,14 +182,14 @@ namespace PizzaCoreAPI.Services
 
             var precioBase = producto.Precio;
             var ingredientes = await _context.Ingredientes
-                .Where(i => ingredientesIds.Contains(i.Id))
+                .Where(i => ingredientesIds.Contains(Guid.Parse(i.Id.ToString())))
                 .ToListAsync();
 
             var precioAdicional = ingredientes.Sum(i => i.PrecioAdicional);
             return precioBase + precioAdicional;
         }
 
-        public async Task<bool> VerificarDisponibilidadAsync(int productoId)
+        public async Task<bool> VerificarDisponibilidadAsync(Guid productoId)
         {
             var producto = await _context.Productos.FindAsync(productoId);
             return producto != null && producto.Disponible;

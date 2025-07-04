@@ -24,18 +24,20 @@ namespace PizzaCoreAPI.Controllers
 
         // POST: api/Factura/Generar
         [HttpPost("Generar")]
-        public async Task<IActionResult> GenerarFactura([FromBody] int pedidoId)
+        public async Task<IActionResult> GenerarFactura([FromBody] string pedidoId)
         {
             try
             {
                 var detalles = await _context.PedidoDetalles
                     .Include(pd => pd.Producto)
+                    .Where(pd => pd.PedidoId.ToString() == pedidoId)
+                    .Select(pd => new { Cantidad = pd.Cantidad, pd.PrecioUnitario, pd.Subtotal, pd.Producto })
                     .ToListAsync();
 
                 var pedido = await _context.Pedidos
                     .Include(p => p.Cliente)
                     .Include(p => p.Empleado)
-                    .FirstOrDefaultAsync(p => p.Id == pedidoId);
+                    .FirstOrDefaultAsync(p => p.Id.ToString() == pedidoId);
 
                 if (pedido == null)
                     return NotFound();
@@ -43,19 +45,25 @@ namespace PizzaCoreAPI.Controllers
                 // Crear la factura
                 var factura = new Factura
                 {
-                    PedidoId = pedido.Id,
-                    NumeroFactura = "FAC-" + pedido.Id.ToString("D6"),
+                    PedidoId = pedidoId,
+                    NumeroFactura = "FAC-" + pedidoId.ToString(),
                     RNC = pedido.Cliente?.RNC ?? string.Empty,
-                    Subtotal = pedido.Detalles.Sum(d => d.Subtotal),
-                    IVA = pedido.Detalles.Sum(d => d.Subtotal) * 0.18m,
-                    Total = pedido.Detalles.Sum(d => d.Subtotal) * 1.18m,
+                    Subtotal = detalles.Sum(d => d.Subtotal),
+                    IVA = detalles.Sum(d => d.Subtotal) * 0.18m,
+                    Total = detalles.Sum(d => d.Subtotal) * 1.18m,
                     Estado = "Pendiente",
                     NombreCliente = pedido.Cliente?.NombreCompleto ?? string.Empty,
                     DireccionCliente = pedido.Cliente?.Direccion ?? string.Empty,
                     NombreEmpleado = pedido.Empleado?.NombreCompleto ?? string.Empty,
                     RNCEmpleado = pedido.Empleado?.RNC ?? string.Empty,
                     FechaEmision = DateTime.Now,
-                    Detalles = pedido.Detalles ?? new List<PedidoDetalle>()
+                    Detalles = detalles.Select(d => new PedidoDetalle
+                    {
+                        Cantidad = d.Cantidad.ToString(),
+                        PrecioUnitario = d.PrecioUnitario,
+                        Subtotal = d.Subtotal,
+                        Producto = d.Producto
+                    }).ToList()
                 };
 
                 // Guardar la factura en la base de datos

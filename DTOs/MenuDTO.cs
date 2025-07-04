@@ -4,7 +4,7 @@ namespace PizzaCoreAPI.DTOs
 {
     public class MenuDTO
     {
-        public int Id { get; set; }
+        public Guid Id { get; set; }
         public string Nombre { get; set; }
         public string Descripcion { get; set; }
         public decimal PrecioTotal { get; set; }
@@ -17,6 +17,6 @@ namespace PizzaCoreAPI.DTOs
         public string Nombre { get; set; }
         public string Descripcion { get; set; }
         public bool Activo { get; set; }
-        public List<int> ProductosIds { get; set; }
+        public List<Guid> ProductosIds { get; set; }
     }
 }

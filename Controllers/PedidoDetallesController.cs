@@ -30,19 +30,19 @@ namespace PizzaCoreAPI.Controllers
 
         // GET: api/PedidoDetalles/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<PedidoDetalle>> GetPedidoDetalle(int id)
+        public async Task<ActionResult<PedidoDetalle>> GetPedidoDetalle(string id)
         {
-            var detalle = await _context.PedidoDetalles
+            var pedidoDetalle = await _context.PedidoDetalles
                 .Include(pd => pd.Producto)
                 .Include(d => d.Pedido)
-                .FirstOrDefaultAsync(d => d.Id == id);
+                .FirstOrDefaultAsync(pd => pd.Id == id);
 
-            if (detalle == null)
+            if (pedidoDetalle == null)
             {
                 return NotFound();
             }
 
-            return detalle;
+            return pedidoDetalle;
         }
 
         // POST: api/PedidoDetalles
@@ -57,9 +57,9 @@ namespace PizzaCoreAPI.Controllers
 
         // PUT: api/PedidoDetalles/5
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutPedidoDetalle(int id, PedidoDetalle detalle)
+        public async Task<IActionResult> PutPedidoDetalle(string id, PedidoDetalle detalle)
         {
-            if (id != detalle.Id)
+            if (id != detalle.Id.ToString())
             {
                 return BadRequest();
             }
@@ -72,15 +72,15 @@ namespace PizzaCoreAPI.Controllers
 
         // DELETE: api/PedidoDetalles/5
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeletePedidoDetalle(int id)
+        public async Task<IActionResult> DeletePedidoDetalle(string id)
         {
-            var detalle = await _context.PedidoDetalles.FindAsync(id);
-            if (detalle == null)
+            var pedidoDetalle = await _context.PedidoDetalles.FindAsync(id);
+            if (pedidoDetalle == null)
             {
                 return NotFound();
             }
 
-            _context.PedidoDetalles.Remove(detalle);
+            _context.PedidoDetalles.Remove(pedidoDetalle);
             await _context.SaveChangesAsync();
 
             return NoContent();

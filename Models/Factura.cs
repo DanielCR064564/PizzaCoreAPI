@@ -5,9 +5,9 @@ namespace PizzaCoreAPI.Models
     public class Factura
     {
         [Key]
-        public int Id { get; set; }
+        public Guid Id { get; set; } = Guid.NewGuid();
         
-        public int PedidoId { get; set; }
+        public string PedidoId { get; set; } = string.Empty;
         public Pedido Pedido { get; set; } = null!;
         
         public string NumeroFactura { get; set; } = string.Empty;

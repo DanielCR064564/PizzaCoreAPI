@@ -5,7 +5,7 @@ namespace PizzaCoreAPI.Models
 {
     public class Menu
     {
-        public int Id { get; set; }
+        public Guid Id { get; set; } = Guid.NewGuid();
 
         [Required]
         public string Nombre { get; set; } = string.Empty;
@@ -16,6 +16,8 @@ namespace PizzaCoreAPI.Models
 
         public bool Activo { get; set; } = true;
 
+        // Relaciones
         public virtual ICollection<Producto> Productos { get; set; } = new List<Producto>();
+        public virtual ICollection<Pizza> Pizzas { get; set; } = new List<Pizza>(); 
     }
 }
