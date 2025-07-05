@@ -8,7 +8,9 @@ using PizzaCoreAPI.Services;
 using PizzaCoreAPI.Interfaces;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using System.Text;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -22,27 +24,59 @@ builder.WebHost.ConfigureKestrel(serverOptions =>
     });
 });
 
-
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
 var secretKey = jwtSettings.GetValue<string>("SecretKey");
 
+// ✅ Controladores + manejo de ciclos JSON
+builder.Services.AddControllers().AddJsonOptions(options =>
+{
+    options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
+});
 
-builder.Services.AddControllers();
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+// ✅ Swagger con autenticación JWT
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "PizzaCore API", Version = "v1" });
 
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.ApiKey,
+        Scheme = "Bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "Ingrese 'Bearer' seguido de su token JWT. Ejemplo: Bearer {token}"
+    });
 
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            new string[] {}
+        }
+    });
+});
+
+// Conversión a PDF
 builder.Services.AddSingleton(typeof(IConverter), new SynchronizedConverter(new PdfTools()));
 
-
+// Identity
 builder.Services.AddIdentity<Usuario, Rol>()
     .AddEntityFrameworkStores<PizzaDbContext>()
     .AddDefaultTokenProviders();
 
+// DB Context
 builder.Services.AddDbContext<PizzaDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("PizzaDb")));
 
-
+// JWT
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -62,7 +96,7 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-// Inyección de servicios personalizados
+// Servicios personalizados
 builder.Services.AddScoped<IProductoService, ProductoService>();
 builder.Services.AddScoped<IMenuService, MenuService>();
 builder.Services.AddScoped<IPagoService, PagoService>();
@@ -72,14 +106,17 @@ builder.Services.AddScoped<RoleInitializer>();
 
 var app = builder.Build();
 
-
+// Swagger
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
+// Middleware
 app.UseHttpsRedirection();
+app.UseAuthentication();
+app.UseAuthorization();
 
 // Inicializar roles
 using (var scope = app.Services.CreateScope())
@@ -88,11 +125,7 @@ using (var scope = app.Services.CreateScope())
     await roleInitializer.InitializeAsync();
 }
 
-// Middleware de autenticación y autorización
-app.UseAuthentication();
-app.UseAuthorization();
-
-// Mapear rutas
+// Map controllers
 app.MapControllers();
 
 app.Run();

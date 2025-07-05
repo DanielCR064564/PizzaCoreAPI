@@ -1,11 +1,10 @@
 using DinkToPdf;
 using DinkToPdf.Contracts;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using PizzaCoreAPI.Data;
 using PizzaCoreAPI.Models;
-using System.IO;
 using System.Text;
-using Microsoft.EntityFrameworkCore;
 
 namespace PizzaCoreAPI.Controllers
 {
@@ -30,27 +29,30 @@ namespace PizzaCoreAPI.Controllers
             {
                 var detalles = await _context.PedidoDetalles
                     .Include(pd => pd.Producto)
-                    .Where(pd => pd.PedidoId.ToString() == pedidoId)
-                    .Select(pd => new { Cantidad = pd.Cantidad, pd.PrecioUnitario, pd.Subtotal, pd.Producto })
+                    .Where(pd => pd.PedidoId == pedidoId)
+                    .Select(pd => new { pd.Cantidad, pd.PrecioUnitario, pd.Subtotal, pd.Producto })
                     .ToListAsync();
 
                 var pedido = await _context.Pedidos
                     .Include(p => p.Cliente)
                     .Include(p => p.Empleado)
-                    .FirstOrDefaultAsync(p => p.Id.ToString() == pedidoId);
+                    .FirstOrDefaultAsync(p => p.Id == pedidoId);
 
                 if (pedido == null)
                     return NotFound();
 
-                // Crear la factura
+                var subtotal = detalles.Sum(d => d.Subtotal);
+                var iva = subtotal * 0.18m;
+                var total = subtotal + iva;
+
                 var factura = new Factura
                 {
                     PedidoId = pedidoId,
-                    NumeroFactura = "FAC-" + pedidoId.ToString(),
+                    NumeroFactura = "FAC-" + pedidoId,
                     RNC = pedido.Cliente?.RNC ?? string.Empty,
-                    Subtotal = detalles.Sum(d => d.Subtotal),
-                    IVA = detalles.Sum(d => d.Subtotal) * 0.18m,
-                    Total = detalles.Sum(d => d.Subtotal) * 1.18m,
+                    Subtotal = subtotal,
+                    IVA = iva,
+                    Total = total,
                     Estado = "Pendiente",
                     NombreCliente = pedido.Cliente?.NombreCompleto ?? string.Empty,
                     DireccionCliente = pedido.Cliente?.Direccion ?? string.Empty,
@@ -59,18 +61,16 @@ namespace PizzaCoreAPI.Controllers
                     FechaEmision = DateTime.Now,
                     Detalles = detalles.Select(d => new PedidoDetalle
                     {
-                        Cantidad = d.Cantidad.ToString(),
+                        Cantidad = d.Cantidad, // ✅ corregido: se queda como int
                         PrecioUnitario = d.PrecioUnitario,
                         Subtotal = d.Subtotal,
                         Producto = d.Producto
                     }).ToList()
                 };
 
-                // Guardar la factura en la base de datos
                 await _context.Facturas.AddAsync(factura);
                 await _context.SaveChangesAsync();
 
-                // Generar PDF
                 var document = new HtmlToPdfDocument()
                 {
                     GlobalSettings = {
@@ -100,74 +100,54 @@ namespace PizzaCoreAPI.Controllers
 
         private async Task<string> GenerateHtmlFactura(Factura factura)
         {
-            var html = $""
-                + "<html>"
-                + "<head>"
-                + "<style>"
-                + "body {{ font-family: Arial, sans-serif; }}"
-                + ".factura {{ max-width: 800px; margin: 0 auto; padding: 20px; }}"
-                + ".header {{ text-align: center; margin-bottom: 30px; }}"
-                + ".detail {{ margin: 20px 0; }}"
-                + ".table {{ width: 100%; border-collapse: collapse; margin: 20px 0; }}"
-                + ".table th, .table td {{ border: 1px solid #ddd; padding: 8px; }}"
-                + ".table th {{ background-color: #f4f4f4; }}"
-                + ".total {{ text-align: right; margin-top: 20px; }}"
-                + "</style>"
-                + "</head>"
-                + "<body>"
-                + $"<div class='factura'>"
-                + $"<div class='header'>"
-                + $"<h1>FACTURA</h1>"
-                + $"<p>Número: {factura?.NumeroFactura ?? "No especificado"}</p>"
-                + $"<p>Fecha: {factura.FechaEmision.ToString("dd/MM/yyyy")}</p>"
-                + $"</div>"
-                + $"<div class='detail'>"
-                + $"<h3>Datos del Cliente</h3>"
-                + $"<p>Nombre: {factura?.NombreCliente ?? "No especificado"}</p>"
-                + $"<p>RNC: {factura?.RNC ?? "No especificado"}</p>"
-                + $"<p>Dirección: {factura?.DireccionCliente ?? "No especificada"}</p>"
-                + $"</div>"
-                + $"<div class='detail'>"
-                + $"<h3>Datos del Empleado</h3>"
-                + $"<p>Nombre: {factura?.NombreEmpleado ?? "No especificado"}</p>"
-                + $"<p>RNC: {factura?.RNCEmpleado ?? "No especificado"}</p>"
-                + $"</div>"
-                + $"<table class='table'>"
-                + $"<thead>"
-                + $"<tr>"
-                + $"<th>Producto</th>"
-                + $"<th>Cantidad</th>"
-                + $"<th>Precio Unitario</th>"
-                + $"<th>Subtotal</th>"
-                + $"</tr>"
-                + $"</thead>"
-                + $"<tbody>";
+            var html = new StringBuilder();
+
+            html.Append("<html><head><style>")
+                .Append("body { font-family: Arial, sans-serif; }")
+                .Append(".factura { max-width: 800px; margin: 0 auto; padding: 20px; }")
+                .Append(".header { text-align: center; margin-bottom: 30px; }")
+                .Append(".detail { margin: 20px 0; }")
+                .Append(".table { width: 100%; border-collapse: collapse; margin: 20px 0; }")
+                .Append(".table th, .table td { border: 1px solid #ddd; padding: 8px; }")
+                .Append(".table th { background-color: #f4f4f4; }")
+                .Append(".total { text-align: right; margin-top: 20px; }")
+                .Append("</style></head><body>")
+                .Append("<div class='factura'>")
+                .Append("<div class='header'><h1>FACTURA</h1>")
+                .Append($"<p>Número: {factura?.NumeroFactura ?? "No especificado"}</p>")
+                .Append($"<p>Fecha: {factura.FechaEmision:dd/MM/yyyy}</p></div>")
+                .Append("<div class='detail'><h3>Datos del Cliente</h3>")
+                .Append($"<p>Nombre: {factura?.NombreCliente ?? "No especificado"}</p>")
+                .Append($"<p>RNC: {factura?.RNC ?? "No especificado"}</p>")
+                .Append($"<p>Dirección: {factura?.DireccionCliente ?? "No especificada"}</p></div>")
+                .Append("<div class='detail'><h3>Datos del Empleado</h3>")
+                .Append($"<p>Nombre: {factura?.NombreEmpleado ?? "No especificado"}</p>")
+                .Append($"<p>RNC: {factura?.RNCEmpleado ?? "No especificado"}</p></div>")
+                .Append("<table class='table'><thead><tr>")
+                .Append("<th>Producto</th><th>Cantidad</th><th>Precio Unitario</th><th>Subtotal</th>")
+                .Append("</tr></thead><tbody>");
 
             if (factura.Detalles != null)
             {
                 foreach (var detalle in factura.Detalles)
                 {
-                    html += $"<tr>"
-                        + $"<td>{detalle.Producto?.Nombre ?? "No especificado"}</td>"
-                        + $"<td>{detalle.Cantidad}</td>"
-                        + $"<td>{detalle.PrecioUnitario:C}</td>"
-                        + $"<td>{detalle.Subtotal:C}</td>"
-                        + $"</tr>";
+                    html.Append("<tr>")
+                        .Append($"<td>{detalle.Producto?.Nombre ?? "No especificado"}</td>")
+                        .Append($"<td>{detalle.Cantidad}</td>")
+                        .Append($"<td>{detalle.PrecioUnitario:C}</td>")
+                        .Append($"<td>{detalle.Subtotal:C}</td>")
+                        .Append("</tr>");
                 }
             }
 
-            html += $"</tbody>"
-                + $"</table>"
-                + $"<div class='total'>"
-                + $"<p>Subtotal: {factura?.Subtotal:C}</p>"
-                + $"<p>IVA (18%): {factura?.IVA:C}</p>"
-                + $"<h3>Total: {factura?.Total:C}</h3>"
-                + $"</div>"
-                + $"</div>"
-                + "</body>"
-                + "</html>";
+            html.Append("</tbody></table>")
+                .Append("<div class='total'>")
+                .Append($"<p>Subtotal: {factura?.Subtotal:C}</p>")
+                .Append($"<p>IVA (18%): {factura?.IVA:C}</p>")
+                .Append($"<h3>Total: {factura?.Total:C}</h3>")
+                .Append("</div></div></body></html>");
 
-            return html;
+            return html.ToString();
         }
     }
 }

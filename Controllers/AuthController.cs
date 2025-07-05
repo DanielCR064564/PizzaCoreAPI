@@ -25,7 +25,6 @@ namespace PizzaCoreAPI.Controllers
             _configuration = configuration;
         }
 
-        // POST: api/Auth/RegisterCliente
         [HttpPost("RegisterCliente")]
         public async Task<IActionResult> RegisterCliente([FromBody] RegisterClienteDTO request)
         {
@@ -49,16 +48,39 @@ namespace PizzaCoreAPI.Controllers
 
             await _userManager.AddToRoleAsync(usuario, "Cliente");
 
-            var token = GenerateJwtToken(usuario, "Cliente");
+            var token = await GenerateJwtToken(usuario);
 
-            return Ok(new
-            {
-                message = "Cliente registrado exitosamente",
-                token
-            });
+            return Ok(new { message = "Cliente registrado exitosamente", token });
         }
 
-        // POST: api/Auth/Login
+        [HttpPost("RegisterEmpleado")]
+        public async Task<IActionResult> RegisterEmpleado([FromBody] RegisterClienteDTO request)
+        {
+            var existingUser = await _userManager.FindByNameAsync(request.UserName);
+            if (existingUser != null)
+                return BadRequest(new { message = "El nombre de usuario ya existe" });
+
+            var usuario = new Usuario
+            {
+                UserName = request.UserName,
+                Email = request.Email,
+                NombreCompleto = request.NombreCompleto,
+                Direccion = request.Direccion,
+                PhoneNumber = request.Telefono,
+                EsEmpleado = true
+            };
+
+            var result = await _userManager.CreateAsync(usuario, request.Password);
+            if (!result.Succeeded)
+                return BadRequest(new { message = "Error al crear el empleado", errors = result.Errors });
+
+            await _userManager.AddToRoleAsync(usuario, "Empleado");
+
+            var token = await GenerateJwtToken(usuario);
+
+            return Ok(new { message = "Empleado registrado exitosamente", token });
+        }
+
         [HttpPost("Login")]
         public async Task<IActionResult> Login([FromBody] LoginDTO request)
         {
@@ -70,29 +92,27 @@ namespace PizzaCoreAPI.Controllers
             if (!result.Succeeded)
                 return Unauthorized(new { message = "Credenciales inválidas" });
 
-            var roles = await _userManager.GetRolesAsync(user);
-            var token = GenerateJwtToken(user, roles.FirstOrDefault() ?? "Cliente");
+            var token = await GenerateJwtToken(user);
 
-            return Ok(new
-            {
-                message = "Login exitoso",
-                token
-            });
+            return Ok(new { message = "Login exitoso", token });
         }
 
-        // Método privado para generar el token JWT
-        private string GenerateJwtToken(Usuario user, string role)
+        // Método mejorado para generar el token
+        private async Task<string> GenerateJwtToken(Usuario user)
         {
             var jwtSettings = _configuration.GetSection("JwtSettings");
             var secretKey = jwtSettings.GetValue<string>("SecretKey")!;
             var issuer = jwtSettings.GetValue<string>("Issuer")!;
             var audience = jwtSettings.GetValue<string>("Audience")!;
 
-            var claims = new[]
+            var roles = await _userManager.GetRolesAsync(user);
+            var role = roles.FirstOrDefault() ?? "Cliente";
+
+            var claims = new List<Claim>
             {
                 new Claim(JwtRegisteredClaimNames.Sub, user.Id),
                 new Claim(JwtRegisteredClaimNames.UniqueName, user.UserName!),
-                new Claim(JwtRegisteredClaimNames.Email, user.Email!),
+                new Claim(JwtRegisteredClaimNames.Email, user.Email ?? ""),
                 new Claim(ClaimTypes.Role, role)
             };
 

@@ -7,7 +7,8 @@ namespace PizzaCoreAPI.Models
     {
         Pizza,
         Bebida,
-        Complemento
+        Postre,
+        Entradas,
     }
 
     public class Producto

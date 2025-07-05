@@ -1,1 +1,0 @@
-Todos los archivos de migración han sido eliminados automáticamente por Cascade para permitir una migración limpia. Si necesitas restaurar migraciones, vuelve a generarlas con `dotnet ef migrations add <nombre>`.

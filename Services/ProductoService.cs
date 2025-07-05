@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -77,7 +77,7 @@ namespace PizzaCoreAPI.Services
                 Nombre = productoDto.Nombre,
                 Descripcion = productoDto.Descripcion,
                 Precio = productoDto.Precio,
-                Tipo = (TipoProducto)Enum.Parse(typeof(TipoProducto), productoDto.Tipo),
+                Tipo = Enum.Parse<TipoProducto>(productoDto.Tipo, ignoreCase: true),
                 Disponible = productoDto.Disponible
             };
 
@@ -123,7 +123,7 @@ namespace PizzaCoreAPI.Services
             producto.Nombre = productoDto.Nombre;
             producto.Descripcion = productoDto.Descripcion;
             producto.Precio = productoDto.Precio;
-            producto.Tipo = (TipoProducto)Enum.Parse(typeof(TipoProducto), productoDto.Tipo);
+            producto.Tipo = Enum.Parse<TipoProducto>(productoDto.Tipo, ignoreCase: true);
             producto.Disponible = productoDto.Disponible;
 
             if (productoDto.IngredientesIds != null)

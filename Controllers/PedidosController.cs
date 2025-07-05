@@ -33,17 +33,17 @@ namespace PizzaCoreAPI.Controllers
                 .ThenInclude(d => d.Producto)
                 .ToListAsync();
 
-            return Ok(pedidos.Select(p => new PedidoDTO
+            var pedidosDTO = pedidos.Select(p => new PedidoDTO
             {
-                Id = p.Id.ToString(),
+                Id = p.Id,
                 FechaPedido = p.FechaPedido,
                 Estado = p.Estado,
                 ClienteId = p.ClienteId,
-                EmpleadoId = p.EmpleadoId.ToString(),
+                EmpleadoId = p.EmpleadoId != null ? p.EmpleadoId.ToString() : null,
                 Total = p.Total,
                 Detalles = p.Detalles.Select(d => new PedidoDetalleDTO
                 {
-                    Id = d.Id.ToString(),
+                    Id = d.Id,
                     ProductoId = d.ProductoId,
                     Cantidad = d.Cantidad,
                     PrecioUnitario = d.PrecioUnitario,
@@ -56,7 +56,9 @@ namespace PizzaCoreAPI.Controllers
                         Tipo = d.Producto.Tipo.ToString()
                     }
                 }).ToList()
-            }));
+            });
+
+            return Ok(pedidosDTO);
         }
 
         // GET: api/Pedidos/5
@@ -71,9 +73,7 @@ namespace PizzaCoreAPI.Controllers
                 .FirstOrDefaultAsync(p => p.Id == id);
 
             if (pedido == null)
-            {
                 return NotFound();
-            }
 
             return Ok(pedido);
         }
@@ -89,7 +89,7 @@ namespace PizzaCoreAPI.Controllers
                 FechaPedido = DateTime.Now,
                 Estado = pedidoDto.Estado,
                 ClienteId = pedidoDto.ClienteId,
-                EmpleadoId = pedidoDto.EmpleadoId,
+                EmpleadoId = string.IsNullOrWhiteSpace(pedidoDto.EmpleadoId) ? null : pedidoDto.EmpleadoId,
                 Total = 0
             };
 
@@ -108,9 +108,9 @@ namespace PizzaCoreAPI.Controllers
                     Id = Guid.NewGuid().ToString(),
                     PedidoId = pedido.Id,
                     ProductoId = detalle.ProductoId,
-                    Cantidad = detalle.Cantidad,
+                    Cantidad = detalle.Cantidad, // int -> int
                     PrecioUnitario = producto.Precio,
-                    Subtotal = producto.Precio * decimal.Parse(detalle.Cantidad)
+                    Subtotal = producto.Precio * detalle.Cantidad
                 };
 
                 total += detallePedido.Subtotal;
@@ -120,7 +120,7 @@ namespace PizzaCoreAPI.Controllers
             pedido.Total = total;
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction("GetPedido", new { id = pedido.Id }, pedido);
+            return CreatedAtAction(nameof(GetPedido), new { id = pedido.Id }, pedido);
         }
 
         // PUT: api/Pedidos/5
@@ -132,22 +132,16 @@ namespace PizzaCoreAPI.Controllers
                 .FirstOrDefaultAsync(p => p.Id == id);
 
             if (pedido == null)
-            {
                 return NotFound();
-            }
 
             if (pedido.Estado == "Cancelado" && pedidoDto.Estado == "Entregado")
-            {
                 return BadRequest("No se puede entregar un pedido cancelado.");
-            }
 
-            pedido.EmpleadoId = pedidoDto.EmpleadoId;
+            pedido.EmpleadoId = string.IsNullOrWhiteSpace(pedidoDto.EmpleadoId) ? null : pedidoDto.EmpleadoId;
             pedido.Estado = pedidoDto.Estado;
 
             if (pedidoDto.Estado == "Entregado" && pedido.FechaEntrega == null)
-            {
                 pedido.FechaEntrega = DateTime.Now;
-            }
 
             _context.PedidoDetalles.RemoveRange(pedido.Detalles);
             await _context.SaveChangesAsync();
@@ -164,9 +158,9 @@ namespace PizzaCoreAPI.Controllers
                     Id = Guid.NewGuid().ToString(),
                     PedidoId = pedido.Id,
                     ProductoId = detalle.ProductoId,
-                    Cantidad = detalle.Cantidad,
+                    Cantidad = detalle.Cantidad, // int -> int
                     PrecioUnitario = producto.Precio,
-                    Subtotal = producto.Precio * decimal.Parse(detalle.Cantidad)
+                    Subtotal = producto.Precio * detalle.Cantidad
                 };
 
                 total += detallePedido.Subtotal;
@@ -186,10 +180,9 @@ namespace PizzaCoreAPI.Controllers
             var pedido = await _context.Pedidos
                 .Include(p => p.Detalles)
                 .FirstOrDefaultAsync(p => p.Id == id);
+
             if (pedido == null)
-            {
                 return NotFound();
-            }
 
             _context.Pedidos.Remove(pedido);
             await _context.SaveChangesAsync();
