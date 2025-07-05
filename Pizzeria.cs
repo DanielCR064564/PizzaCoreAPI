@@ -22,19 +22,19 @@ builder.WebHost.ConfigureKestrel(serverOptions =>
     });
 });
 
-// Leer configuración JWT desde appsettings.json
+
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
 var secretKey = jwtSettings.GetValue<string>("SecretKey");
 
-// Configuración de servicios
+
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// DinkToPdf
+
 builder.Services.AddSingleton(typeof(IConverter), new SynchronizedConverter(new PdfTools()));
 
-// Identity y EF Core
+
 builder.Services.AddIdentity<Usuario, Rol>()
     .AddEntityFrameworkStores<PizzaDbContext>()
     .AddDefaultTokenProviders();
@@ -42,7 +42,7 @@ builder.Services.AddIdentity<Usuario, Rol>()
 builder.Services.AddDbContext<PizzaDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("PizzaDb")));
 
-// Autenticación JWT
+
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -65,11 +65,14 @@ builder.Services.AddAuthentication(options =>
 // Inyección de servicios personalizados
 builder.Services.AddScoped<IProductoService, ProductoService>();
 builder.Services.AddScoped<IMenuService, MenuService>();
+builder.Services.AddScoped<IPagoService, PagoService>();
+builder.Services.AddScoped<IMetodoDePagoService, MetodoDePagoService>();
+builder.Services.AddScoped<ICuentasPorCobrarService, CuentasPorCobrarService>();
 builder.Services.AddScoped<RoleInitializer>();
 
 var app = builder.Build();
 
-// Swagger
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();

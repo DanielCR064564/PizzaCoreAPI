@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PizzaCoreAPI.Data;
 using PizzaCoreAPI.Models;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -25,16 +26,13 @@ namespace PizzaCoreAPI.Controllers
             return await _context.Ingredientes.ToListAsync();
         }
 
-        // GET: api/Ingredientes/5
+        // GET: api/Ingredientes/{id}
         [HttpGet("{id}")]
-        public async Task<ActionResult<Ingrediente>> GetIngrediente(int id)
+        public async Task<ActionResult<Ingrediente>> GetIngrediente(Guid id)
         {
             var ingrediente = await _context.Ingredientes.FindAsync(id);
-
             if (ingrediente == null)
-            {
                 return NotFound();
-            }
 
             return ingrediente;
         }
@@ -49,14 +47,12 @@ namespace PizzaCoreAPI.Controllers
             return CreatedAtAction("GetIngrediente", new { id = ingrediente.Id }, ingrediente);
         }
 
-        // PUT: api/Ingredientes/5
+        // PUT: api/Ingredientes/{id}
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutIngrediente(int id, Ingrediente ingrediente)
+        public async Task<IActionResult> PutIngrediente(Guid id, Ingrediente ingrediente)
         {
             if (id != ingrediente.Id)
-            {
                 return BadRequest();
-            }
 
             _context.Entry(ingrediente).State = EntityState.Modified;
             await _context.SaveChangesAsync();
@@ -64,15 +60,13 @@ namespace PizzaCoreAPI.Controllers
             return NoContent();
         }
 
-        // DELETE: api/Ingredientes/5
+        // DELETE: api/Ingredientes/{id}
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteIngrediente(int id)
+        public async Task<IActionResult> DeleteIngrediente(Guid id)
         {
             var ingrediente = await _context.Ingredientes.FindAsync(id);
             if (ingrediente == null)
-            {
                 return NotFound();
-            }
 
             _context.Ingredientes.Remove(ingrediente);
             await _context.SaveChangesAsync();

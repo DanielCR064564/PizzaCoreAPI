@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using PizzaCoreAPI.Data;
 using PizzaCoreAPI.Models;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace PizzaCoreAPI.Controllers
@@ -28,14 +29,14 @@ namespace PizzaCoreAPI.Controllers
             return clientes;
         }
 
-        // GET: api/Clientes/5
+        // GET: api/Clientes/{id}
         [HttpGet("{id}")]
-        public async Task<ActionResult<Usuario>> GetCliente(int id)
+        public async Task<ActionResult<Usuario>> GetCliente(string id)
         {
             var usuario = await _context.Usuarios
                 .Include(u => u.Pedidos)
                 .Where(u => !u.EsEmpleado)
-                .FirstOrDefaultAsync(u => u.Id == id.ToString());
+                .FirstOrDefaultAsync(u => u.Id == id);
 
             if (usuario == null)
             {
@@ -49,34 +50,48 @@ namespace PizzaCoreAPI.Controllers
         [HttpPost]
         public async Task<ActionResult<Usuario>> PostCliente(Usuario usuario)
         {
+            usuario.EsEmpleado = false; // Forzar que sea cliente
             _context.Usuarios.Add(usuario);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction("GetCliente", new { id = usuario.Id }, usuario);
+            return CreatedAtAction(nameof(GetCliente), new { id = usuario.Id }, usuario);
         }
 
-        // PUT: api/Clientes/5
+        // PUT: api/Clientes/{id}
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutCliente(int id, Usuario usuario)
+        public async Task<IActionResult> PutCliente(string id, Usuario usuario)
         {
-            if (id.ToString() != usuario.Id)
+            // Forzar que el ID recibido en el body coincida con el de la URL
+            usuario.Id = id;
+
+            var usuarioExistente = await _context.Usuarios
+                .FirstOrDefaultAsync(u => u.Id == id && !u.EsEmpleado);
+
+            if (usuarioExistente == null)
             {
-                return BadRequest(new { message = "El ID no coincide con el usuario" });
+                return NotFound();
             }
 
-            _context.Entry(usuario).State = EntityState.Modified;
+            // Actualizar solo campos relevantes
+            usuarioExistente.NombreCompleto = usuario.NombreCompleto;
+            usuarioExistente.UserName = usuario.UserName;
+            usuarioExistente.Email = usuario.Email;
+            usuarioExistente.PhoneNumber = usuario.PhoneNumber;
+            usuarioExistente.Direccion = usuario.Direccion;
+
             await _context.SaveChangesAsync();
 
-            return NoContent();
+            return Ok(new { message = "Cliente actualizado correctamente" });
         }
 
-        // DELETE: api/Clientes/5
+        // DELETE: api/Clientes/{id}
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteCliente(int id)
+        public async Task<IActionResult> DeleteCliente(string id)
         {
             var usuario = await _context.Usuarios
-                .Where(u => !u.EsEmpleado && u.Id == id.ToString())
+                .Where(u => !u.EsEmpleado && u.Id == id)
                 .FirstOrDefaultAsync();
+
             if (usuario == null)
             {
                 return NotFound();

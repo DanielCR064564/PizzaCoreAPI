@@ -17,7 +17,7 @@ namespace PizzaCoreAPI.DTOs
     public class PedidoDetalleDTO
     {
         public string Id { get; set; } = string.Empty;
-        public string ProductoId { get; set; } = string.Empty;
+        public Guid ProductoId { get; set; }
         public string Cantidad { get; set; }
         public decimal PrecioUnitario { get; set; }
         public decimal Subtotal { get; set; }

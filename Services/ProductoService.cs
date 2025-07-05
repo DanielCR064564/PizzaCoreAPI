@@ -33,13 +33,12 @@ namespace PizzaCoreAPI.Services
                 Precio = p.Precio,
                 Tipo = p.Tipo.ToString(),
                 Disponible = p.Disponible,
-                ImagenUrl = p.ImagenUrl,
                 Ingredientes = p.Ingredientes.Select(i => new IngredienteDTO
                 {
                     Id = i.Id,
                     Nombre = i.Nombre,
                     PrecioAdicional = i.PrecioAdicional,
-                    Tipo = i.Tipo
+                    Tipo = i.Tipo.ToString()
                 }).ToList()
             }).ToList();
         }
@@ -61,13 +60,12 @@ namespace PizzaCoreAPI.Services
                 Precio = producto.Precio,
                 Tipo = producto.Tipo.ToString(),
                 Disponible = producto.Disponible,
-                ImagenUrl = producto.ImagenUrl,
                 Ingredientes = producto.Ingredientes.Select(i => new IngredienteDTO
                 {
                     Id = i.Id,
                     Nombre = i.Nombre,
                     PrecioAdicional = i.PrecioAdicional,
-                    Tipo = i.Tipo
+                    Tipo = i.Tipo.ToString()
                 }).ToList()
             };
         }
@@ -80,15 +78,15 @@ namespace PizzaCoreAPI.Services
                 Descripcion = productoDto.Descripcion,
                 Precio = productoDto.Precio,
                 Tipo = (TipoProducto)Enum.Parse(typeof(TipoProducto), productoDto.Tipo),
-                Disponible = productoDto.Disponible,
-                ImagenUrl = productoDto.ImagenUrl
+                Disponible = productoDto.Disponible
             };
 
             if (productoDto.IngredientesIds != null && productoDto.IngredientesIds.Any())
             {
                 var ingredientes = await _context.Ingredientes
-                    .Where(i => productoDto.IngredientesIds.Contains(Guid.Parse(i.Id.ToString())))
+                    .Where(i => productoDto.IngredientesIds.Contains(i.Id))
                     .ToListAsync();
+
                 producto.Ingredientes = ingredientes;
             }
 
@@ -103,20 +101,22 @@ namespace PizzaCoreAPI.Services
                 Precio = producto.Precio,
                 Tipo = producto.Tipo.ToString(),
                 Disponible = producto.Disponible,
-                ImagenUrl = producto.ImagenUrl,
                 Ingredientes = producto.Ingredientes.Select(i => new IngredienteDTO
                 {
                     Id = i.Id,
                     Nombre = i.Nombre,
                     PrecioAdicional = i.PrecioAdicional,
-                    Tipo = i.Tipo
+                    Tipo = i.Tipo.ToString()
                 }).ToList()
             };
         }
 
         public async Task UpdateProductoAsync(Guid id, CrearProductoDTO productoDto)
         {
-            var producto = await _context.Productos.FindAsync(id);
+            var producto = await _context.Productos
+                .Include(p => p.Ingredientes)
+                .FirstOrDefaultAsync(p => p.Id == id);
+
             if (producto == null)
                 return;
 
@@ -125,13 +125,13 @@ namespace PizzaCoreAPI.Services
             producto.Precio = productoDto.Precio;
             producto.Tipo = (TipoProducto)Enum.Parse(typeof(TipoProducto), productoDto.Tipo);
             producto.Disponible = productoDto.Disponible;
-            producto.ImagenUrl = productoDto.ImagenUrl;
 
-            if (productoDto.IngredientesIds != null && productoDto.IngredientesIds.Any())
+            if (productoDto.IngredientesIds != null)
             {
                 var ingredientes = await _context.Ingredientes
-                    .Where(i => productoDto.IngredientesIds.Contains(Guid.Parse(i.Id.ToString())))
+                    .Where(i => productoDto.IngredientesIds.Contains(i.Id))
                     .ToListAsync();
+
                 producto.Ingredientes = ingredientes;
             }
 
@@ -163,13 +163,12 @@ namespace PizzaCoreAPI.Services
                 Precio = p.Precio,
                 Tipo = p.Tipo.ToString(),
                 Disponible = p.Disponible,
-                ImagenUrl = p.ImagenUrl,
                 Ingredientes = p.Ingredientes.Select(i => new IngredienteDTO
                 {
                     Id = i.Id,
                     Nombre = i.Nombre,
                     PrecioAdicional = i.PrecioAdicional,
-                    Tipo = i.Tipo
+                    Tipo = i.Tipo.ToString()
                 }).ToList()
             }).ToList();
         }
@@ -182,7 +181,7 @@ namespace PizzaCoreAPI.Services
 
             var precioBase = producto.Precio;
             var ingredientes = await _context.Ingredientes
-                .Where(i => ingredientesIds.Contains(Guid.Parse(i.Id.ToString())))
+                .Where(i => ingredientesIds.Contains(i.Id))
                 .ToListAsync();
 
             var precioAdicional = ingredientes.Sum(i => i.PrecioAdicional);

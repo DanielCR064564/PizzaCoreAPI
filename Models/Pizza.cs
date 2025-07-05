@@ -5,7 +5,7 @@ namespace PizzaCoreAPI.Models
 {
     public class Pizza
     {
-        public int Id { get; set; }
+        public Guid Id { get; set; } = Guid.NewGuid();
 
         [Required]
         public string Nombre { get; set; } = string.Empty;
@@ -16,7 +16,7 @@ namespace PizzaCoreAPI.Models
         [Required]
         public decimal Precio { get; set; }
 
-        public string ImagenUrl { get; set; } = string.Empty;
+
 
         public bool Disponible { get; set; } = true;
 

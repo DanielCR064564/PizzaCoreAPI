@@ -42,14 +42,14 @@ namespace PizzaCoreAPI.Controllers
         }
 
         [HttpPost]
-        public async Task<ActionResult<ProductoDTO>> CreateProducto(CrearProductoDTO productoDto)
+        public async Task<ActionResult<ProductoDTO>> CreateProducto([FromBody] CrearProductoDTO productoDto)
         {
             var producto = await _productoService.CreateProductoAsync(productoDto);
             return CreatedAtAction(nameof(GetProducto), new { id = producto.Id }, producto);
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateProducto(Guid id, CrearProductoDTO productoDto)
+        public async Task<IActionResult> UpdateProducto(Guid id, [FromBody] CrearProductoDTO productoDto)
         {
             await _productoService.UpdateProductoAsync(id, productoDto);
             return NoContent();

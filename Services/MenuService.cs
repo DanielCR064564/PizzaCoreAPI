@@ -41,8 +41,7 @@ namespace PizzaCoreAPI.Services
                     Descripcion = p.Descripcion,
                     Precio = p.Precio,
                     Tipo = p.Tipo.ToString(),
-                    Disponible = p.Disponible,
-                    ImagenUrl = p.ImagenUrl
+                    Disponible = p.Disponible
                 }).ToList()
             }).ToList();
         }
@@ -70,8 +69,7 @@ namespace PizzaCoreAPI.Services
                     Descripcion = p.Descripcion,
                     Precio = p.Precio,
                     Tipo = p.Tipo.ToString(),
-                    Disponible = p.Disponible,
-                    ImagenUrl = p.ImagenUrl
+                    Disponible = p.Disponible
                 }).ToList()
             };
         }
@@ -113,8 +111,7 @@ namespace PizzaCoreAPI.Services
                     Descripcion = p.Descripcion,
                     Precio = p.Precio,
                     Tipo = p.Tipo.ToString(),
-                    Disponible = p.Disponible,
-                    ImagenUrl = p.ImagenUrl
+                    Disponible = p.Disponible
                 }).ToList()
             };
         }
@@ -174,8 +171,7 @@ namespace PizzaCoreAPI.Services
                     Descripcion = p.Descripcion,
                     Precio = p.Precio,
                     Tipo = p.Tipo.ToString(),
-                    Disponible = p.Disponible,
-                    ImagenUrl = p.ImagenUrl
+                    Disponible = p.Disponible
                 }).ToList()
             }).ToList();
         }

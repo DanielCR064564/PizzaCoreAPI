@@ -19,6 +19,9 @@ namespace PizzaCoreAPI.Data
         public DbSet<PedidoDetalle> PedidoDetalles { get; set; }
         public DbSet<Factura> Facturas { get; set; }
         public DbSet<Pizza> Pizzas { get; set; }
+        public DbSet<Pago> Pagos { get; set; }
+        public DbSet<MetodoDePago> MetodosDePago { get; set; }
+        public DbSet<CuentasPorCobrar> CuentasPorCobrar { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -85,6 +88,10 @@ namespace PizzaCoreAPI.Data
                 .HasPrecision(18, 2);
 
             modelBuilder.Entity<Ingrediente>()
+            .Property(i => i.Tipo)
+            .HasConversion<string>();
+
+        modelBuilder.Entity<Ingrediente>()
                 .Property(i => i.PrecioAdicional)
                 .HasPrecision(18, 2);
 

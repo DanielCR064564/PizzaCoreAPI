@@ -16,7 +16,7 @@ namespace PizzaCoreAPI.Models
 
         public bool Activo { get; set; } = true;
 
-        // Relaciones
+        
         public virtual ICollection<Producto> Productos { get; set; } = new List<Producto>();
         public virtual ICollection<Pizza> Pizzas { get; set; } = new List<Pizza>(); 
     }

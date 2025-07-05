@@ -12,8 +12,8 @@ using PizzaCoreAPI.Data;
 namespace PizzaCoreAPI.Migrations
 {
     [DbContext(typeof(PizzaDbContext))]
-    [Migration("20250704184939_UpdateGuidToString2")]
-    partial class UpdateGuidToString2
+    [Migration("20250705123525_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -27,8 +27,8 @@ namespace PizzaCoreAPI.Migrations
 
             modelBuilder.Entity("IngredienteProducto", b =>
                 {
-                    b.Property<int>("IngredientesId")
-                        .HasColumnType("int");
+                    b.Property<Guid>("IngredientesId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("ProductosId")
                         .HasColumnType("uniqueidentifier");
@@ -38,6 +38,21 @@ namespace PizzaCoreAPI.Migrations
                     b.HasIndex("ProductosId");
 
                     b.ToTable("ProductoIngredientes", (string)null);
+                });
+
+            modelBuilder.Entity("MenuPizza", b =>
+                {
+                    b.Property<Guid>("MenusId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("PizzasId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("MenusId", "PizzasId");
+
+                    b.HasIndex("PizzasId");
+
+                    b.ToTable("MenuPizzas", (string)null);
                 });
 
             modelBuilder.Entity("MenuProducto", b =>
@@ -161,6 +176,33 @@ namespace PizzaCoreAPI.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("PizzaCoreAPI.Models.CuentasPorCobrar", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("ClienteId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("FechaVencimiento")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("MontoPendiente")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("PedidoId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("CuentasPorCobrar");
+                });
+
             modelBuilder.Entity("PizzaCoreAPI.Models.Factura", b =>
                 {
                     b.Property<Guid>("Id")
@@ -223,11 +265,9 @@ namespace PizzaCoreAPI.Migrations
 
             modelBuilder.Entity("PizzaCoreAPI.Models.Ingrediente", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Descripcion")
                         .IsRequired()
@@ -236,6 +276,9 @@ namespace PizzaCoreAPI.Migrations
                     b.Property<string>("Nombre")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid?>("PizzaId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<decimal>("PrecioAdicional")
                         .HasPrecision(18, 2)
@@ -246,6 +289,8 @@ namespace PizzaCoreAPI.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("PizzaId");
 
                     b.ToTable("Ingredientes");
                 });
@@ -268,11 +313,60 @@ namespace PizzaCoreAPI.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal>("PrecioTotal")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.HasKey("Id");
 
                     b.ToTable("Menus");
+                });
+
+            modelBuilder.Entity("PizzaCoreAPI.Models.MetodoDePago", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Descripcion")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("MetodosDePago");
+                });
+
+            modelBuilder.Entity("PizzaCoreAPI.Models.Pago", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("ClienteId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("FechaPago")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("MetodoDePagoId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("Monto")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Observaciones")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PedidoId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Pagos");
                 });
 
             modelBuilder.Entity("PizzaCoreAPI.Models.Pedido", b =>
@@ -331,6 +425,9 @@ namespace PizzaCoreAPI.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
+                    b.Property<Guid?>("PizzaId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<decimal>("PrecioUnitario")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
@@ -348,9 +445,36 @@ namespace PizzaCoreAPI.Migrations
 
                     b.HasIndex("PedidoId");
 
+                    b.HasIndex("PizzaId");
+
                     b.HasIndex("ProductoId");
 
                     b.ToTable("PedidoDetalles");
+                });
+
+            modelBuilder.Entity("PizzaCoreAPI.Models.Pizza", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Descripcion")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("Disponible")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("Precio")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Pizzas");
                 });
 
             modelBuilder.Entity("PizzaCoreAPI.Models.Producto", b =>
@@ -365,10 +489,6 @@ namespace PizzaCoreAPI.Migrations
 
                     b.Property<bool>("Disponible")
                         .HasColumnType("bit");
-
-                    b.Property<string>("ImagenUrl")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Nombre")
                         .IsRequired()
@@ -517,6 +637,21 @@ namespace PizzaCoreAPI.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("MenuPizza", b =>
+                {
+                    b.HasOne("PizzaCoreAPI.Models.Menu", null)
+                        .WithMany()
+                        .HasForeignKey("MenusId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("PizzaCoreAPI.Models.Pizza", null)
+                        .WithMany()
+                        .HasForeignKey("PizzasId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("MenuProducto", b =>
                 {
                     b.HasOne("PizzaCoreAPI.Models.Menu", null)
@@ -594,6 +729,13 @@ namespace PizzaCoreAPI.Migrations
                     b.Navigation("Pedido");
                 });
 
+            modelBuilder.Entity("PizzaCoreAPI.Models.Ingrediente", b =>
+                {
+                    b.HasOne("PizzaCoreAPI.Models.Pizza", null)
+                        .WithMany("Ingredientes")
+                        .HasForeignKey("PizzaId");
+                });
+
             modelBuilder.Entity("PizzaCoreAPI.Models.Pedido", b =>
                 {
                     b.HasOne("PizzaCoreAPI.Models.Usuario", "Cliente")
@@ -624,6 +766,10 @@ namespace PizzaCoreAPI.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("PizzaCoreAPI.Models.Pizza", null)
+                        .WithMany("PedidoDetalles")
+                        .HasForeignKey("PizzaId");
+
                     b.HasOne("PizzaCoreAPI.Models.Producto", "Producto")
                         .WithMany("PedidoDetalles")
                         .HasForeignKey("ProductoId")
@@ -652,6 +798,13 @@ namespace PizzaCoreAPI.Migrations
                     b.Navigation("Detalles");
 
                     b.Navigation("Productos");
+                });
+
+            modelBuilder.Entity("PizzaCoreAPI.Models.Pizza", b =>
+                {
+                    b.Navigation("Ingredientes");
+
+                    b.Navigation("PedidoDetalles");
                 });
 
             modelBuilder.Entity("PizzaCoreAPI.Models.Producto", b =>

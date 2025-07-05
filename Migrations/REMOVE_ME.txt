@@ -1,0 +1,1 @@
+Este archivo es temporal. Se eliminarán todas las migraciones para limpiar el historial y permitir el cambio de tipo de clave primaria en Ingrediente.

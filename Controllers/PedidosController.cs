@@ -38,13 +38,13 @@ namespace PizzaCoreAPI.Controllers
                 Id = p.Id.ToString(),
                 FechaPedido = p.FechaPedido,
                 Estado = p.Estado,
-                ClienteId = p.ClienteId.ToString(),
+                ClienteId = p.ClienteId,
                 EmpleadoId = p.EmpleadoId.ToString(),
                 Total = p.Total,
                 Detalles = p.Detalles.Select(d => new PedidoDetalleDTO
                 {
                     Id = d.Id.ToString(),
-                    ProductoId = d.ProductoId.ToString(),
+                    ProductoId = d.ProductoId,
                     Cantidad = d.Cantidad,
                     PrecioUnitario = d.PrecioUnitario,
                     Subtotal = d.Subtotal,
@@ -99,7 +99,7 @@ namespace PizzaCoreAPI.Controllers
             decimal total = 0;
             foreach (var detalle in pedidoDto.Detalles)
             {
-                var producto = await _context.Productos.FindAsync(Guid.Parse(detalle.ProductoId));
+                var producto = await _context.Productos.FindAsync(detalle.ProductoId);
                 if (producto == null || !producto.Disponible)
                     throw new InvalidOperationException("Producto no disponible");
 
@@ -107,7 +107,7 @@ namespace PizzaCoreAPI.Controllers
                 {
                     Id = Guid.NewGuid().ToString(),
                     PedidoId = pedido.Id,
-                    ProductoId = Guid.Parse(detalle.ProductoId),
+                    ProductoId = detalle.ProductoId,
                     Cantidad = detalle.Cantidad,
                     PrecioUnitario = producto.Precio,
                     Subtotal = producto.Precio * decimal.Parse(detalle.Cantidad)
@@ -155,7 +155,7 @@ namespace PizzaCoreAPI.Controllers
             decimal total = 0;
             foreach (var detalle in pedidoDto.Detalles)
             {
-                var producto = await _context.Productos.FindAsync(Guid.Parse(detalle.ProductoId));
+                var producto = await _context.Productos.FindAsync(detalle.ProductoId);
                 if (producto == null || !producto.Disponible)
                     return BadRequest("Producto no disponible");
 
@@ -163,7 +163,7 @@ namespace PizzaCoreAPI.Controllers
                 {
                     Id = Guid.NewGuid().ToString(),
                     PedidoId = pedido.Id,
-                    ProductoId = Guid.Parse(detalle.ProductoId),
+                    ProductoId = detalle.ProductoId,
                     Cantidad = detalle.Cantidad,
                     PrecioUnitario = producto.Precio,
                     Subtotal = producto.Precio * decimal.Parse(detalle.Cantidad)
