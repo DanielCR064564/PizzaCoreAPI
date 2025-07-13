@@ -23,6 +23,8 @@ namespace PizzaCoreAPI.Data
         public DbSet<Pago> Pagos { get; set; }
         public DbSet<MetodoDePago> MetodosDePago { get; set; }
         public DbSet<CuentasPorCobrar> CuentasPorCobrar { get; set; }
+        public DbSet<Venta> Ventas { get; set; }
+        public DbSet<VentaDetalle> VentaDetalles { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -94,6 +96,44 @@ namespace PizzaCoreAPI.Data
                 .HasForeignKey(f => f.PedidoId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            // Venta relationships
+            modelBuilder.Entity<Venta>()
+                .HasOne(v => v.Cliente)
+                .WithMany()
+                .HasForeignKey(v => v.ClienteId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Venta>()
+                .HasOne(v => v.Empleado)
+                .WithMany()
+                .HasForeignKey(v => v.EmpleadoId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Venta>()
+                .HasOne(v => v.Pedido)
+                .WithMany()
+                .HasForeignKey(v => v.PedidoId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<Venta>()
+                .HasOne(v => v.Factura)
+                .WithMany()
+                .HasForeignKey(v => v.FacturaId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            // VentaDetalle relationships
+            modelBuilder.Entity<VentaDetalle>()
+                .HasOne(vd => vd.Venta)
+                .WithMany(v => v.Detalles)
+                .HasForeignKey(vd => vd.VentaId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<VentaDetalle>()
+                .HasOne(vd => vd.Producto)
+                .WithMany()
+                .HasForeignKey(vd => vd.ProductoId)
+                .OnDelete(DeleteBehavior.Restrict);
+
             // Add indexes for frequently queried fields
             ConfigureIndexes(modelBuilder);
 
@@ -136,9 +176,25 @@ namespace PizzaCoreAPI.Data
                 .Property(m => m.Id)
                 .HasColumnType("char(36)");
 
+            modelBuilder.Entity<Venta>()
+                .Property(v => v.Id)
+                .HasColumnType("char(36)");
+
+            modelBuilder.Entity<VentaDetalle>()
+                .Property(vd => vd.Id)
+                .HasColumnType("char(36)");
+
             // Foreign key GUID references
             modelBuilder.Entity<PedidoDetalle>()
                 .Property(pd => pd.ProductoId)
+                .HasColumnType("char(36)");
+
+            modelBuilder.Entity<VentaDetalle>()
+                .Property(vd => vd.VentaId)
+                .HasColumnType("char(36)");
+
+            modelBuilder.Entity<VentaDetalle>()
+                .Property(vd => vd.ProductoId)
                 .HasColumnType("char(36)");
 
             modelBuilder.Entity<Pago>()
@@ -209,6 +265,40 @@ namespace PizzaCoreAPI.Data
                 .Property(p => p.ClienteId)
                 .HasMaxLength(255)
                 .HasColumnType("varchar(255)");
+
+            // Venta string configurations
+            modelBuilder.Entity<Venta>()
+                .Property(v => v.Id)
+                .HasMaxLength(36)
+                .HasColumnType("varchar(36)");
+
+            modelBuilder.Entity<Venta>()
+                .Property(v => v.NumeroOrden)
+                .HasMaxLength(100);
+
+            modelBuilder.Entity<Venta>()
+                .Property(v => v.ClienteId)
+                .HasMaxLength(255)
+                .HasColumnType("varchar(255)");
+
+            modelBuilder.Entity<Venta>()
+                .Property(v => v.EmpleadoId)
+                .HasMaxLength(255)
+                .HasColumnType("varchar(255)");
+
+            modelBuilder.Entity<Venta>()
+                .Property(v => v.PedidoId)
+                .HasMaxLength(36)
+                .HasColumnType("varchar(36)");
+
+            modelBuilder.Entity<Venta>()
+                .Property(v => v.TerminalId)
+                .HasMaxLength(50);
+
+            modelBuilder.Entity<VentaDetalle>()
+                .Property(vd => vd.Id)
+                .HasMaxLength(36)
+                .HasColumnType("varchar(36)");
 
             // String properties with reasonable lengths
             modelBuilder.Entity<Producto>()
@@ -319,6 +409,18 @@ namespace PizzaCoreAPI.Data
             modelBuilder.Entity<CuentasPorCobrar>()
                 .Property(c => c.MontoPendiente)
                 .HasColumnType("decimal(10,2)");
+
+            modelBuilder.Entity<Venta>()
+                .Property(v => v.Total)
+                .HasColumnType("decimal(10,2)");
+
+            modelBuilder.Entity<VentaDetalle>()
+                .Property(vd => vd.PrecioUnitario)
+                .HasColumnType("decimal(10,2)");
+
+            modelBuilder.Entity<VentaDetalle>()
+                .Property(vd => vd.Subtotal)
+                .HasColumnType("decimal(10,2)");
         }
 
         private void ConfigureEnumConversions(ModelBuilder modelBuilder)
@@ -331,6 +433,16 @@ namespace PizzaCoreAPI.Data
 
             modelBuilder.Entity<Ingrediente>()
                 .Property(i => i.Tipo)
+                .HasConversion<string>()
+                .HasMaxLength(50);
+
+            modelBuilder.Entity<Venta>()
+                .Property(v => v.MetodoPago)
+                .HasConversion<string>()
+                .HasMaxLength(50);
+
+            modelBuilder.Entity<Venta>()
+                .Property(v => v.Estado)
                 .HasConversion<string>()
                 .HasMaxLength(50);
         }
@@ -365,6 +477,22 @@ namespace PizzaCoreAPI.Data
             modelBuilder.Entity<Factura>()
                 .HasIndex(f => f.FechaEmision)
                 .HasDatabaseName("IX_Factura_FechaEmision");
+
+            modelBuilder.Entity<Venta>()
+                .HasIndex(v => v.FechaVenta)
+                .HasDatabaseName("IX_Venta_FechaVenta");
+
+            modelBuilder.Entity<Venta>()
+                .HasIndex(v => v.Estado)
+                .HasDatabaseName("IX_Venta_Estado");
+
+            modelBuilder.Entity<Venta>()
+                .HasIndex(v => v.NumeroOrden)
+                .HasDatabaseName("IX_Venta_NumeroOrden");
+
+            modelBuilder.Entity<Venta>()
+                .HasIndex(v => v.ClienteId)
+                .HasDatabaseName("IX_Venta_ClienteId");
 
             modelBuilder.Entity<Factura>()
                 .HasIndex(f => f.Estado)

@@ -181,8 +181,8 @@ namespace PizzaCoreAPI.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("varchar(255)");
 
-                    b.Property<string>("Estado")
-                        .HasColumnType("varchar(255)");
+                    b.Property<int>("Estado")
+                        .HasColumnType("int");
 
                     b.Property<DateTime?>("FechaEntrega")
                         .HasColumnType("datetime(6)");
@@ -268,9 +268,8 @@ namespace PizzaCoreAPI.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("varchar(255)");
 
-                    b.Property<string>("Estado")
-                        .IsRequired()
-                        .HasColumnType("longtext");
+                    b.Property<int>("Estado")
+                        .HasColumnType("int");
 
                     b.Property<DateTime>("FechaVencimiento")
                         .HasColumnType("datetime(6)");
@@ -297,9 +296,8 @@ namespace PizzaCoreAPI.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
-                    b.Property<string>("Estado")
-                        .IsRequired()
-                        .HasColumnType("varchar(255)");
+                    b.Property<int>("Estado")
+                        .HasColumnType("int");
 
                     b.Property<DateTime>("FechaEmision")
                         .HasColumnType("datetime(6)");
@@ -650,6 +648,113 @@ namespace PizzaCoreAPI.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
+            modelBuilder.Entity("PizzaCoreAPI.Models.Venta", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(36)
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("ClienteId")
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<string>("EmpleadoId")
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<Guid?>("FacturaId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime?>("FechaActualizacion")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime>("FechaVenta")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("MetodoPago")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<string>("NumeroOrden")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<string>("PedidoId")
+                        .HasMaxLength(36)
+                        .HasColumnType("varchar(36)");
+
+                    b.Property<string>("TerminalId")
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<decimal>("Total")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClienteId")
+                        .HasDatabaseName("IX_Venta_ClienteId");
+
+                    b.HasIndex("EmpleadoId");
+
+                    b.HasIndex("Estado")
+                        .HasDatabaseName("IX_Venta_Estado");
+
+                    b.HasIndex("FacturaId");
+
+                    b.HasIndex("FechaVenta")
+                        .HasDatabaseName("IX_Venta_FechaVenta");
+
+                    b.HasIndex("NumeroOrden")
+                        .HasDatabaseName("IX_Venta_NumeroOrden");
+
+                    b.HasIndex("PedidoId");
+
+                    b.ToTable("Ventas");
+                });
+
+            modelBuilder.Entity("PizzaCoreAPI.Models.VentaDetalle", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(36)
+                        .HasColumnType("char(36)");
+
+                    b.Property<int>("Cantidad")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("PrecioUnitario")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<Guid>("ProductoId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<decimal>("Subtotal")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<Guid>("VentaId")
+                        .HasColumnType("char(36)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductoId");
+
+                    b.HasIndex("VentaId");
+
+                    b.ToTable("VentaDetalles");
+                });
+
             modelBuilder.Entity("IngredienteProducto", b =>
                 {
                     b.HasOne("PizzaCoreAPI.Models.Ingrediente", null)
@@ -816,6 +921,56 @@ namespace PizzaCoreAPI.Migrations
                         .HasForeignKey("PedidoId");
                 });
 
+            modelBuilder.Entity("PizzaCoreAPI.Models.Venta", b =>
+                {
+                    b.HasOne("PizzaCoreAPI.Models.Usuario", "Cliente")
+                        .WithMany()
+                        .HasForeignKey("ClienteId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("PizzaCoreAPI.Models.Usuario", "Empleado")
+                        .WithMany()
+                        .HasForeignKey("EmpleadoId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("PizzaCoreAPI.Models.Factura", "Factura")
+                        .WithMany()
+                        .HasForeignKey("FacturaId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Pedido", "Pedido")
+                        .WithMany()
+                        .HasForeignKey("PedidoId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Cliente");
+
+                    b.Navigation("Empleado");
+
+                    b.Navigation("Factura");
+
+                    b.Navigation("Pedido");
+                });
+
+            modelBuilder.Entity("PizzaCoreAPI.Models.VentaDetalle", b =>
+                {
+                    b.HasOne("PizzaCoreAPI.Models.Producto", "Producto")
+                        .WithMany()
+                        .HasForeignKey("ProductoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("PizzaCoreAPI.Models.Venta", "Venta")
+                        .WithMany("Detalles")
+                        .HasForeignKey("VentaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Producto");
+
+                    b.Navigation("Venta");
+                });
+
             modelBuilder.Entity("Pedido", b =>
                 {
                     b.Navigation("Detalles");
@@ -845,6 +1000,11 @@ namespace PizzaCoreAPI.Migrations
                     b.Navigation("Pedidos");
 
                     b.Navigation("PedidosEmpleado");
+                });
+
+            modelBuilder.Entity("PizzaCoreAPI.Models.Venta", b =>
+                {
+                    b.Navigation("Detalles");
                 });
 #pragma warning restore 612, 618
         }

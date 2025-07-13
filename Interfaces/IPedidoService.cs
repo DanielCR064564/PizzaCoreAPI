@@ -1,7 +1,7 @@
 using PizzaCoreAPI.DTOs;
 using PizzaCoreAPI.Models;
 
-namespace PizzaCoreAPI.Services
+namespace PizzaCoreAPI.Interfaces
 {
     public interface IPedidoService
     {

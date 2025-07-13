@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using PizzaCoreAPI.DTOs;
 using PizzaCoreAPI.Models;
 using PizzaCoreAPI.Services;
+using PizzaCoreAPI.Interfaces;
 
 namespace PizzaCoreAPI.Controllers
 {

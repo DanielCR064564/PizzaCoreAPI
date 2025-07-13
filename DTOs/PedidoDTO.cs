@@ -13,6 +13,8 @@ namespace PizzaCoreAPI.DTOs
         public decimal Total { get; set; }
         public string? MetodoPago { get; set; }
         public string? Notas { get; set; }
+        public string? NumeroOrden { get; set; }
+        public string? TerminalId { get; set; }
         public List<PedidoDetalleDTO> Detalles { get; set; } = new();
 
         // Additional computed properties
@@ -59,6 +61,16 @@ namespace PizzaCoreAPI.DTOs
 
         [StringLength(500, ErrorMessage = "Las notas no pueden exceder 500 caracteres")]
         public string? Notas { get; set; }
+
+        public DateTime? FechaPedido { get; set; }
+
+        public decimal? Total { get; set; }
+
+        [StringLength(100, ErrorMessage = "El número de orden no puede exceder 100 caracteres")]
+        public string? NumeroOrden { get; set; }
+
+        [StringLength(50, ErrorMessage = "El ID del terminal no puede exceder 50 caracteres")]
+        public string? TerminalId { get; set; }
 
         [Required(ErrorMessage = "Los detalles del pedido son requeridos")]
         [MinLength(1, ErrorMessage = "Debe incluir al menos un producto en el pedido")]
@@ -119,6 +131,12 @@ namespace PizzaCoreAPI.DTOs
         [Required(ErrorMessage = "La cantidad es requerida")]
         [Range(1, 100, ErrorMessage = "La cantidad debe estar entre 1 y 100")]
         public int Cantidad { get; set; } = 1;
+
+        [Range(0.01, double.MaxValue, ErrorMessage = "El precio unitario debe ser mayor a 0")]
+        public decimal? PrecioUnitario { get; set; }
+
+        [Range(0.01, double.MaxValue, ErrorMessage = "El subtotal debe ser mayor a 0")]
+        public decimal? Subtotal { get; set; }
     }
 
     public class ActualizarEstadoPedidoDTO

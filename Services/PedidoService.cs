@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using PizzaCoreAPI.Data;
 using PizzaCoreAPI.DTOs;
 using PizzaCoreAPI.Models;
+using PizzaCoreAPI.Interfaces;
 
 namespace PizzaCoreAPI.Services
 {
