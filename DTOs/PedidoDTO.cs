@@ -4,7 +4,7 @@
     {
         public string Id { get; set; } = string.Empty;
         public DateTime FechaPedido { get; set; }
-        public string Estado { get; set; }
+        public string Estado { get; set; } = "Pendiente";
         public string ClienteId { get; set; } = string.Empty;
         public string? EmpleadoId { get; set; }
         public decimal Total { get; set; }

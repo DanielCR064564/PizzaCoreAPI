@@ -16,7 +16,7 @@ public class Pedido
 
     public DateTime? FechaEntrega { get; set; }
 
-    public string? Estado { get; set; } = "Pendiente";
+    public EstadoPedido Estado { get; set; } = EstadoPedido.Pendiente;
 
     public decimal Total { get; set; } = 0;
 

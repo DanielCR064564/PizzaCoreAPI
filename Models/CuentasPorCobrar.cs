@@ -15,6 +15,6 @@ namespace PizzaCoreAPI.Models
         [Required]
         public DateTime FechaVencimiento { get; set; }
         [Required]
-        public string Estado { get; set; } = "Pendiente";
+        public EstadoCuentaPorCobrar Estado { get; set; } = EstadoCuentaPorCobrar.Pendiente;
     }
 }

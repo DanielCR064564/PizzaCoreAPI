@@ -27,7 +27,7 @@ namespace PizzaCoreAPI.DTOs
         public decimal Precio { get; set; }
 
         [Required]
-        public string Tipo { get; set; } // ✅ Se cambió de enum a string
+        public string Tipo { get; set; }
 
         public bool Disponible { get; set; } = true;
 

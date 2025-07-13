@@ -77,7 +77,8 @@ builder.Services.AddDbContext<PizzaDbContext>(options =>
     options.UseMySql(
         builder.Configuration.GetConnectionString("PizzaDb"),
         ServerVersion.AutoDetect(builder.Configuration.GetConnectionString("PizzaDb")),
-        mysqlOptions => {
+        mysqlOptions =>
+        {
             mysqlOptions.EnableRetryOnFailure();
         }
     ));
@@ -108,6 +109,7 @@ builder.Services.AddScoped<IMenuService, MenuService>();
 builder.Services.AddScoped<IPagoService, PagoService>();
 builder.Services.AddScoped<IMetodoDePagoService, MetodoDePagoService>();
 builder.Services.AddScoped<ICuentasPorCobrarService, CuentasPorCobrarService>();
+builder.Services.AddScoped<IIngredienteService, IngredienteService>();
 builder.Services.AddScoped<RoleInitializer>();
 
 var app = builder.Build();

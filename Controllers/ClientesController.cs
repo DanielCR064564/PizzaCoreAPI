@@ -1,9 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using PizzaCoreAPI.Data;
-using PizzaCoreAPI.Models;
+using PizzaCoreAPI.DTOs;
+using PizzaCoreAPI.Interfaces;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace PizzaCoreAPI.Controllers
@@ -12,95 +10,116 @@ namespace PizzaCoreAPI.Controllers
     [Route("api/[controller]")]
     public class ClientesController : ControllerBase
     {
-        private readonly PizzaDbContext _context;
+        private readonly IClienteService _clienteService;
 
-        public ClientesController(PizzaDbContext context)
+        public ClientesController(IClienteService clienteService)
         {
-            _context = context;
+            _clienteService = clienteService;
         }
 
         // GET: api/Clientes
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Usuario>>> GetClientes()
+        public async Task<ActionResult<IEnumerable<ClienteDTO>>> GetClientes()
         {
-            var clientes = await _context.Usuarios
-                .Where(u => !u.EsEmpleado)
-                .ToListAsync();
-            return clientes;
+            var clientes = await _clienteService.GetAllClientesAsync();
+            return Ok(clientes);
         }
 
         // GET: api/Clientes/{id}
         [HttpGet("{id}")]
-        public async Task<ActionResult<Usuario>> GetCliente(string id)
+        public async Task<ActionResult<ClienteDTO>> GetCliente(string id)
         {
-            var usuario = await _context.Usuarios
-                .Include(u => u.Pedidos)
-                .Where(u => !u.EsEmpleado)
-                .FirstOrDefaultAsync(u => u.Id == id);
-
-            if (usuario == null)
+            var cliente = await _clienteService.GetClienteByIdAsync(id);
+            
+            if (cliente == null)
             {
-                return NotFound();
+                return NotFound(new { message = "Cliente no encontrado" });
             }
 
-            return usuario;
+            return Ok(cliente);
         }
 
         // POST: api/Clientes
         [HttpPost]
-        public async Task<ActionResult<Usuario>> PostCliente(Usuario usuario)
+        public async Task<ActionResult<ClienteDTO>> PostCliente([FromBody] CrearClienteDTO clienteDto)
         {
-            usuario.EsEmpleado = false; // Forzar que sea cliente
-            _context.Usuarios.Add(usuario);
-            await _context.SaveChangesAsync();
+            try
+            {
+                // ✅ Validate unique constraints
+                if (await _clienteService.UserNameExistsAsync(clienteDto.UserName))
+                {
+                    return BadRequest(new { message = "El nombre de usuario ya existe" });
+                }
 
-            return CreatedAtAction(nameof(GetCliente), new { id = usuario.Id }, usuario);
+                if (await _clienteService.EmailExistsAsync(clienteDto.Email))
+                {
+                    return BadRequest(new { message = "El email ya está registrado" });
+                }
+
+                var cliente = await _clienteService.CreateClienteAsync(clienteDto);
+                return CreatedAtAction(nameof(GetCliente), new { id = cliente.Id }, cliente);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         // PUT: api/Clientes/{id}
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutCliente(string id, Usuario usuario)
+        public async Task<IActionResult> PutCliente(string id, [FromBody] ActualizarClienteDTO clienteDto)
         {
-            // Forzar que el ID recibido en el body coincida con el de la URL
-            usuario.Id = id;
-
-            var usuarioExistente = await _context.Usuarios
-                .FirstOrDefaultAsync(u => u.Id == id && !u.EsEmpleado);
-
-            if (usuarioExistente == null)
+            try
             {
-                return NotFound();
+                // ✅ Check if client exists
+                if (!await _clienteService.ClienteExistsAsync(id))
+                {
+                    return NotFound(new { message = "Cliente no encontrado" });
+                }
+
+                var success = await _clienteService.UpdateClienteAsync(id, clienteDto);
+                
+                if (!success)
+                {
+                    return BadRequest(new { message = "Error al actualizar el cliente" });
+                }
+
+                return NoContent();
             }
-
-            // Actualizar solo campos relevantes
-            usuarioExistente.NombreCompleto = usuario.NombreCompleto;
-            usuarioExistente.UserName = usuario.UserName;
-            usuarioExistente.Email = usuario.Email;
-            usuarioExistente.PhoneNumber = usuario.PhoneNumber;
-            usuarioExistente.Direccion = usuario.Direccion;
-
-            await _context.SaveChangesAsync();
-
-            return Ok(new { message = "Cliente actualizado correctamente" });
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         // DELETE: api/Clientes/{id}
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteCliente(string id)
         {
-            var usuario = await _context.Usuarios
-                .Where(u => !u.EsEmpleado && u.Id == id)
-                .FirstOrDefaultAsync();
-
-            if (usuario == null)
+            var success = await _clienteService.DeleteClienteAsync(id);
+            
+            if (!success)
             {
-                return NotFound();
+                return NotFound(new { message = "Cliente no encontrado" });
             }
 
-            _context.Usuarios.Remove(usuario);
-            await _context.SaveChangesAsync();
-
             return NoContent();
+        }
+
+        // GET: api/Clientes/validate/username/{username}
+        [HttpGet("validate/username/{username}")]
+        public async Task<ActionResult<bool>> ValidateUsername(string username)
+        {
+            var exists = await _clienteService.UserNameExistsAsync(username);
+            return Ok(new { exists, available = !exists });
+        }
+
+        // GET: api/Clientes/validate/email/{email}
+        [HttpGet("validate/email/{email}")]
+        public async Task<ActionResult<bool>> ValidateEmail(string email)
+        {
+            var exists = await _clienteService.EmailExistsAsync(email);
+            return Ok(new { exists, available = !exists });
         }
     }
 }

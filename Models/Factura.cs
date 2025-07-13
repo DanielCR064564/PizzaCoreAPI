@@ -17,7 +17,7 @@ namespace PizzaCoreAPI.Models
         public decimal IVA { get; set; }
         public decimal Total { get; set; }
         
-        public string Estado { get; set; } = "Pendiente"; // Pendiente, Pagado, Anulado
+        public EstadoFactura Estado { get; set; } = EstadoFactura.Pendiente;
         
         public string NombreCliente { get; set; } = string.Empty;
         public string DireccionCliente { get; set; } = string.Empty;
