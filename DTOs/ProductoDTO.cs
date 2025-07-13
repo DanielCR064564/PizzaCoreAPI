@@ -12,7 +12,14 @@ namespace PizzaCoreAPI.DTOs
         public decimal Precio { get; set; }
         public string Tipo { get; set; } = string.Empty;
         public bool Disponible { get; set; }
-        public DateTime? FechaActualizacion { get; set; }
+        public int Stock { get; set; }
+        public DateTime FechaCreacion { get; set; }
+        public DateTime FechaActualizacion { get; set; }
+        public string? ApiId { get; set; }
+        public bool SincronizadoConAPI { get; set; }
+        public string? Imagen { get; set; }
+        public string? IngredientesTexto { get; set; }
+        public int TiempoPreparacion { get; set; }
         public List<IngredienteDTO> Ingredientes { get; set; } = new();
     }
 
@@ -31,6 +38,18 @@ namespace PizzaCoreAPI.DTOs
         public string Tipo { get; set; } = string.Empty;
 
         public bool Disponible { get; set; } = true;
+
+        public int Stock { get; set; } = 0;
+
+        public string? ApiId { get; set; }
+
+        public bool SincronizadoConAPI { get; set; } = false;
+
+        public string? Imagen { get; set; }
+
+        public string? IngredientesTexto { get; set; }
+
+        public int TiempoPreparacion { get; set; } = 15;
 
         [Required]
         public List<Guid> IngredientesIds { get; set; } = new();

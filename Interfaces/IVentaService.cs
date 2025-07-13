@@ -11,7 +11,7 @@ namespace PizzaCoreAPI.Interfaces
         Task<IEnumerable<VentaDTO>> GetVentasByClienteAsync(string clienteId);
         Task<IEnumerable<VentaDTO>> GetVentasByEstadoAsync(EstadoVenta estado);
         Task<IEnumerable<VentaDTO>> GetVentasByFechaAsync(DateTime fechaInicio, DateTime fechaFin);
-        Task<VentaDTO> CreateVentaAsync(CrearVentaDTO dto);
+        Task<VentaDTO> CreateVentaAsync(CrearVentaDTO dto, bool validateClients = true);
         Task<bool> UpdateVentaAsync(Guid id, CrearVentaDTO dto);
         Task<bool> DeleteVentaAsync(Guid id);
         Task<bool> CancelarVentaAsync(Guid id);

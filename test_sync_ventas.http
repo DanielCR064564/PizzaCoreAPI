@@ -1,0 +1,41 @@
+@PizzaCoreAPI_HostAddress = http://localhost:5200
+
+### Test Sync Ventas Endpoint
+POST {{PizzaCoreAPI_HostAddress}}/api/Sync/ventas
+Content-Type: application/json
+
+{
+  "numeroOrden": "1",
+  "clienteId": "1",
+  "fechaVenta": "2025-07-13T18:04:20.188Z",
+  "total": 450,
+  "metodoPago": "1",
+  "terminalId": "70c290bd-5fb8-11f0-a049-34298f730067",
+  "detalles": [
+    {
+      "productoApiId": "eabb7002-6007-11f0-a049-34298f730067",
+      "cantidad": 1,
+      "precioUnitario": 450
+    }
+  ]
+}
+
+### Test another sync with different client and order
+POST {{PizzaCoreAPI_HostAddress}}/api/Sync/ventas
+Content-Type: application/json
+
+{
+  "numeroOrden": "2",
+  "clienteId": "999",
+  "fechaVenta": "2025-07-13T18:10:00.000Z",
+  "total": 350,
+  "metodoPago": "2",
+  "terminalId": "70c290bd-5fb8-11f0-a049-34298f730067",
+  "detalles": [
+    {
+      "productoApiId": "eabb7002-6007-11f0-a049-34298f730067",
+      "cantidad": 1,
+      "precioUnitario": 350
+    }
+  ]
+}

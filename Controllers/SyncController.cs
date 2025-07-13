@@ -57,7 +57,7 @@ namespace PizzaCoreAPI.Controllers
                     Descripcion = p.Descripcion,
                     Disponible = p.Disponible,
                     Tipo = p.Tipo,
-                    FechaActualizacion = p.FechaActualizacion ?? DateTime.Now
+                    FechaActualizacion = p.FechaActualizacion
                 }).ToList();
 
                 return Ok(response);

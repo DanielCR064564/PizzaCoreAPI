@@ -98,7 +98,7 @@ namespace PizzaCoreAPI.Services
             return ventas.Select(MapToDTO);
         }
 
-        public async Task<VentaDTO> CreateVentaAsync(CrearVentaDTO dto)
+        public async Task<VentaDTO> CreateVentaAsync(CrearVentaDTO dto, bool validateClients = true)
         {
             // Validate that details are provided
             if (dto.Detalles == null || !dto.Detalles.Any())
@@ -112,76 +112,81 @@ namespace PizzaCoreAPI.Services
                     throw new InvalidOperationException($"Producto {detalle.ProductoId} no disponible");
             }
 
-            // Validate customer exists if provided
-            if (!string.IsNullOrWhiteSpace(dto.ClienteId))
+            // Validate customer exists if provided (skip validation for sync operations)
+            if (validateClients && !string.IsNullOrWhiteSpace(dto.ClienteId))
             {
                 var clienteExists = await _context.Usuarios.AnyAsync(u => u.Id == dto.ClienteId && !u.EsEmpleado);
                 if (!clienteExists)
                     throw new InvalidOperationException("Cliente no encontrado");
             }
 
-            // Validate employee exists if provided
-            if (!string.IsNullOrWhiteSpace(dto.EmpleadoId))
+            // Validate employee exists if provided (skip validation for sync operations)
+            if (validateClients && !string.IsNullOrWhiteSpace(dto.EmpleadoId))
             {
                 var empleadoExists = await _context.Usuarios.AnyAsync(u => u.Id == dto.EmpleadoId && u.EsEmpleado);
                 if (!empleadoExists)
                     throw new InvalidOperationException("Empleado no encontrado");
             }
 
-            using var transaction = await _context.Database.BeginTransactionAsync();
-            try
+            // Use MySQL execution strategy for transactions
+            var strategy = _context.Database.CreateExecutionStrategy();
+            return await strategy.ExecuteAsync(async () =>
             {
-                // Create sale
-                var venta = new Venta
+                using var transaction = await _context.Database.BeginTransactionAsync();
+                try
                 {
-                    Id = Guid.NewGuid(),
-                    NumeroOrden = dto.NumeroOrden,
-                    ClienteId = dto.ClienteId,
-                    EmpleadoId = dto.EmpleadoId,
-                    FechaVenta = dto.FechaVenta,
-                    MetodoPago = Enum.Parse<MetodoPago>(dto.MetodoPago, ignoreCase: true),
-                    TerminalId = dto.TerminalId,
-                    Estado = EstadoVenta.Completada,
-                    Total = 0
-                };
-
-                _context.Ventas.Add(venta);
-                await _context.SaveChangesAsync();
-
-                // Create sale details and calculate total
-                decimal total = 0;
-                foreach (var detalleDto in dto.Detalles)
-                {
-                    var producto = await _context.Productos.FindAsync(detalleDto.ProductoId);
-                    if (producto == null)
-                        throw new InvalidOperationException($"Producto {detalleDto.ProductoId} no encontrado");
-
-                    var detalle = new VentaDetalle
+                    // Create sale
+                    var venta = new Venta
                     {
                         Id = Guid.NewGuid(),
-                        VentaId = venta.Id,
-                        ProductoId = detalleDto.ProductoId,
-                        Cantidad = detalleDto.Cantidad,
-                        PrecioUnitario = detalleDto.PrecioUnitario > 0 ? detalleDto.PrecioUnitario : producto.Precio,
-                        Subtotal = (detalleDto.PrecioUnitario > 0 ? detalleDto.PrecioUnitario : producto.Precio) * detalleDto.Cantidad
+                        NumeroOrden = dto.NumeroOrden,
+                        ClienteId = validateClients ? dto.ClienteId : null,
+                        EmpleadoId = validateClients ? dto.EmpleadoId : null,
+                        FechaVenta = dto.FechaVenta,
+                        MetodoPago = Enum.Parse<MetodoPago>(dto.MetodoPago, ignoreCase: true),
+                        TerminalId = dto.TerminalId,
+                        Estado = EstadoVenta.Completada,
+                        Total = 0
                     };
 
-                    total += detalle.Subtotal;
-                    _context.VentaDetalles.Add(detalle);
+                    _context.Ventas.Add(venta);
+                    await _context.SaveChangesAsync();
+
+                    // Create sale details and calculate total
+                    decimal total = 0;
+                    foreach (var detalleDto in dto.Detalles)
+                    {
+                        var producto = await _context.Productos.FindAsync(detalleDto.ProductoId);
+                        if (producto == null)
+                            throw new InvalidOperationException($"Producto {detalleDto.ProductoId} no encontrado");
+
+                        var detalle = new VentaDetalle
+                        {
+                            Id = Guid.NewGuid(),
+                            VentaId = venta.Id,
+                            ProductoId = detalleDto.ProductoId,
+                            Cantidad = detalleDto.Cantidad,
+                            PrecioUnitario = detalleDto.PrecioUnitario > 0 ? detalleDto.PrecioUnitario : producto.Precio,
+                            Subtotal = (detalleDto.PrecioUnitario > 0 ? detalleDto.PrecioUnitario : producto.Precio) * detalleDto.Cantidad
+                        };
+
+                        total += detalle.Subtotal;
+                        _context.VentaDetalles.Add(detalle);
+                    }
+
+                    venta.Total = total;
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+
+                    return await GetVentaByIdAsync(venta.Id) ??
+                           throw new InvalidOperationException("Error retrieving created sale");
                 }
-
-                venta.Total = total;
-                await _context.SaveChangesAsync();
-                await transaction.CommitAsync();
-
-                return await GetVentaByIdAsync(venta.Id) ?? 
-                       throw new InvalidOperationException("Error retrieving created sale");
-            }
-            catch
-            {
-                await transaction.RollbackAsync();
-                throw;
-            }
+                catch
+                {
+                    await transaction.RollbackAsync();
+                    throw;
+                }
+            });
         }
 
         public async Task<VentaDTO> CreateVentaFromSyncAsync(SyncVentaDTO syncDto)
@@ -189,33 +194,32 @@ namespace PizzaCoreAPI.Services
             // Check if sale already exists
             var existingVenta = await _context.Ventas
                 .FirstOrDefaultAsync(v => v.NumeroOrden == syncDto.NumeroOrden);
-            
+
             if (existingVenta != null)
                 return MapToDTO(existingVenta);
 
-            using var transaction = await _context.Database.BeginTransactionAsync();
+            // Create the sale without nested transactions
+            var createVentaDto = new CrearVentaDTO
+            {
+                NumeroOrden = syncDto.NumeroOrden,
+                ClienteId = syncDto.ClienteId ?? "cliente-pos",
+                FechaVenta = syncDto.FechaVenta,
+                Total = syncDto.Total,
+                MetodoPago = syncDto.MetodoPago,
+                TerminalId = syncDto.TerminalId,
+                Detalles = syncDto.Detalles.Select(d => new CrearVentaDetalleDTO
+                {
+                    ProductoId = Guid.Parse(d.ProductoApiId),
+                    Cantidad = d.Cantidad,
+                    PrecioUnitario = d.PrecioUnitario
+                }).ToList()
+            };
+
+            var venta = await CreateVentaAsync(createVentaDto, false);
+
+            // Also create a Pedido for compatibility (without transaction)
             try
             {
-                // Create the sale
-                var createVentaDto = new CrearVentaDTO
-                {
-                    NumeroOrden = syncDto.NumeroOrden,
-                    ClienteId = syncDto.ClienteId ?? "cliente-pos",
-                    FechaVenta = syncDto.FechaVenta,
-                    Total = syncDto.Total,
-                    MetodoPago = syncDto.MetodoPago,
-                    TerminalId = syncDto.TerminalId,
-                    Detalles = syncDto.Detalles.Select(d => new CrearVentaDetalleDTO
-                    {
-                        ProductoId = Guid.Parse(d.ProductoApiId),
-                        Cantidad = d.Cantidad,
-                        PrecioUnitario = d.PrecioUnitario
-                    }).ToList()
-                };
-
-                var venta = await CreateVentaFromDtoAsync(createVentaDto);
-
-                // Also create a Pedido for compatibility
                 var pedidoDto = new CrearPedidoDTO
                 {
                     ClienteId = syncDto.ClienteId ?? "cliente-pos",
@@ -243,18 +247,18 @@ namespace PizzaCoreAPI.Services
                     ventaEntity.PedidoId = pedido.Id;
                     await _context.SaveChangesAsync();
                 }
-
-                await transaction.CommitAsync();
-                return await GetVentaByIdAsync(venta.Id) ?? venta;
             }
-            catch
+            catch (Exception ex)
             {
-                await transaction.RollbackAsync();
-                throw;
+                // Log the error but don't fail the sale creation
+                // The sale was created successfully, just couldn't link to pedido
+                Console.WriteLine($"Warning: Could not create linked pedido: {ex.Message}");
             }
+
+            return venta;
         }
 
-        private async Task<VentaDTO> CreateVentaFromDtoAsync(CrearVentaDTO dto)
+        private async Task<VentaDTO> CreateVentaFromDtoInTransactionAsync(CrearVentaDTO dto)
         {
             var venta = new Venta
             {
@@ -312,55 +316,60 @@ namespace PizzaCoreAPI.Services
             if (venta.Estado == EstadoVenta.Completada)
                 throw new InvalidOperationException("No se puede modificar una venta completada");
 
-            using var transaction = await _context.Database.BeginTransactionAsync();
-            try
+            // Use MySQL execution strategy for transactions
+            var strategy = _context.Database.CreateExecutionStrategy();
+            return await strategy.ExecuteAsync(async () =>
             {
-                // Update basic properties
-                venta.EmpleadoId = dto.EmpleadoId;
-                venta.MetodoPago = Enum.Parse<MetodoPago>(dto.MetodoPago, ignoreCase: true);
-                venta.TerminalId = dto.TerminalId;
-                venta.FechaActualizacion = DateTime.Now;
-
-                // Update details if provided
-                if (dto.Detalles?.Any() == true)
+                using var transaction = await _context.Database.BeginTransactionAsync();
+                try
                 {
-                    // Remove existing details
-                    _context.VentaDetalles.RemoveRange(venta.Detalles);
+                    // Update basic properties
+                    venta.EmpleadoId = dto.EmpleadoId;
+                    venta.MetodoPago = Enum.Parse<MetodoPago>(dto.MetodoPago, ignoreCase: true);
+                    venta.TerminalId = dto.TerminalId;
+                    venta.FechaActualizacion = DateTime.Now;
 
-                    // Add new details
-                    decimal total = 0;
-                    foreach (var detalleDto in dto.Detalles)
+                    // Update details if provided
+                    if (dto.Detalles?.Any() == true)
                     {
-                        var producto = await _context.Productos.FindAsync(detalleDto.ProductoId);
-                        if (producto == null || !producto.Disponible)
-                            throw new InvalidOperationException($"Producto {detalleDto.ProductoId} no disponible");
+                        // Remove existing details
+                        _context.VentaDetalles.RemoveRange(venta.Detalles);
 
-                        var detalle = new VentaDetalle
+                        // Add new details
+                        decimal total = 0;
+                        foreach (var detalleDto in dto.Detalles)
                         {
-                            Id = Guid.NewGuid(),
-                            VentaId = venta.Id,
-                            ProductoId = detalleDto.ProductoId,
-                            Cantidad = detalleDto.Cantidad,
-                            PrecioUnitario = detalleDto.PrecioUnitario > 0 ? detalleDto.PrecioUnitario : producto.Precio,
-                            Subtotal = (detalleDto.PrecioUnitario > 0 ? detalleDto.PrecioUnitario : producto.Precio) * detalleDto.Cantidad
-                        };
+                            var producto = await _context.Productos.FindAsync(detalleDto.ProductoId);
+                            if (producto == null || !producto.Disponible)
+                                throw new InvalidOperationException($"Producto {detalleDto.ProductoId} no disponible");
 
-                        total += detalle.Subtotal;
-                        _context.VentaDetalles.Add(detalle);
+                            var detalle = new VentaDetalle
+                            {
+                                Id = Guid.NewGuid(),
+                                VentaId = venta.Id,
+                                ProductoId = detalleDto.ProductoId,
+                                Cantidad = detalleDto.Cantidad,
+                                PrecioUnitario = detalleDto.PrecioUnitario > 0 ? detalleDto.PrecioUnitario : producto.Precio,
+                                Subtotal = (detalleDto.PrecioUnitario > 0 ? detalleDto.PrecioUnitario : producto.Precio) * detalleDto.Cantidad
+                            };
+
+                            total += detalle.Subtotal;
+                            _context.VentaDetalles.Add(detalle);
+                        }
+
+                        venta.Total = total;
                     }
 
-                    venta.Total = total;
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+                    return true;
                 }
-
-                await _context.SaveChangesAsync();
-                await transaction.CommitAsync();
-                return true;
-            }
-            catch
-            {
-                await transaction.RollbackAsync();
-                throw;
-            }
+                catch
+                {
+                    await transaction.RollbackAsync();
+                    throw;
+                }
+            });
         }
 
         public async Task<bool> DeleteVentaAsync(Guid id)

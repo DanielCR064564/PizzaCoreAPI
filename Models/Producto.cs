@@ -8,7 +8,8 @@ namespace PizzaCoreAPI.Models
         Pizza,
         Bebida,
         Postre,
-        Entradas,
+        Entrada,
+        Complemento
     }
 
     public class Producto
@@ -28,7 +29,21 @@ namespace PizzaCoreAPI.Models
 
         public bool Disponible { get; set; } = true;
 
+        public int Stock { get; set; } = 0;
 
+        public DateTime FechaCreacion { get; set; } = DateTime.Now;
+
+        public DateTime FechaActualizacion { get; set; } = DateTime.Now;
+
+        public string? ApiId { get; set; }
+
+        public bool SincronizadoConAPI { get; set; } = false;
+
+        public string? Imagen { get; set; }
+
+        public string? IngredientesTexto { get; set; }
+
+        public int TiempoPreparacion { get; set; } = 15;
 
         public virtual ICollection<Ingrediente> Ingredientes { get; set; } = new List<Ingrediente>();
         public virtual ICollection<PedidoDetalle> PedidoDetalles { get; set; } = new List<PedidoDetalle>();

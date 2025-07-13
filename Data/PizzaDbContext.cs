@@ -145,7 +145,7 @@ namespace PizzaCoreAPI.Data
         {
             // Keep Identity tables as varchar(255) - this is the standard
             // Our business entities will use varchar(36) but foreign keys to Identity will use varchar(255)
-            
+
             // No changes needed here - let Identity use its default configuration
         }
 
@@ -205,7 +205,7 @@ namespace PizzaCoreAPI.Data
         private void ConfigureStringLengths(ModelBuilder modelBuilder)
         {
             // Note: Identity tables use varchar(255) for IDs, so foreign keys should match
-            
+
             // Pedido ID (string/GUID)
             modelBuilder.Entity<Pedido>()
                 .Property(p => p.Id)
@@ -308,6 +308,49 @@ namespace PizzaCoreAPI.Data
             modelBuilder.Entity<Producto>()
                 .Property(p => p.Descripcion)
                 .HasMaxLength(1000);
+
+            // New product fields configuration
+            modelBuilder.Entity<Producto>()
+                .Property(p => p.FechaCreacion)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            modelBuilder.Entity<Producto>()
+                .Property(p => p.FechaActualizacion)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
+
+            modelBuilder.Entity<Producto>()
+                .Property(p => p.ApiId)
+                .HasMaxLength(36)
+                .HasColumnType("varchar(36)");
+
+            modelBuilder.Entity<Producto>()
+                .Property(p => p.Imagen)
+                .HasMaxLength(255);
+
+            modelBuilder.Entity<Producto>()
+                .Property(p => p.IngredientesTexto)
+                .HasColumnType("text");
+
+            modelBuilder.Entity<Producto>()
+                .Property(p => p.TiempoPreparacion)
+                .HasDefaultValue(15);
+
+            // Add indexes for better performance
+            modelBuilder.Entity<Producto>()
+                .HasIndex(p => p.Nombre)
+                .HasDatabaseName("idx_producto_nombre");
+
+            modelBuilder.Entity<Producto>()
+                .HasIndex(p => p.Tipo)
+                .HasDatabaseName("idx_producto_tipo");
+
+            modelBuilder.Entity<Producto>()
+                .HasIndex(p => p.Disponible)
+                .HasDatabaseName("idx_producto_disponible");
+
+            modelBuilder.Entity<Producto>()
+                .HasIndex(p => p.ApiId)
+                .HasDatabaseName("idx_producto_api");
 
             modelBuilder.Entity<Menu>()
                 .Property(m => m.Nombre)
