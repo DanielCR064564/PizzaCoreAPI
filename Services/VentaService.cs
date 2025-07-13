@@ -143,7 +143,7 @@ namespace PizzaCoreAPI.Services
                         ClienteId = validateClients ? dto.ClienteId : null,
                         EmpleadoId = validateClients ? dto.EmpleadoId : null,
                         FechaVenta = dto.FechaVenta,
-                        MetodoPago = Enum.Parse<MetodoPago>(dto.MetodoPago, ignoreCase: true),
+                        MetodoPago = ParseMetodoPago(dto.MetodoPago),
                         TerminalId = dto.TerminalId,
                         Estado = EstadoVenta.Completada,
                         Total = 0
@@ -202,58 +202,42 @@ namespace PizzaCoreAPI.Services
             var createVentaDto = new CrearVentaDTO
             {
                 NumeroOrden = syncDto.NumeroOrden,
-                ClienteId = syncDto.ClienteId ?? "cliente-pos",
+                ClienteId = null, // Don't set ClienteId for sync to avoid foreign key issues
+                EmpleadoId = null, // Don't set EmpleadoId for sync to avoid foreign key issues
                 FechaVenta = syncDto.FechaVenta,
                 Total = syncDto.Total,
                 MetodoPago = syncDto.MetodoPago,
-                TerminalId = syncDto.TerminalId,
-                Detalles = syncDto.Detalles.Select(d => new CrearVentaDetalleDTO
-                {
-                    ProductoId = Guid.Parse(d.ProductoApiId),
-                    Cantidad = d.Cantidad,
-                    PrecioUnitario = d.PrecioUnitario
-                }).ToList()
-            };
-
-            var venta = await CreateVentaAsync(createVentaDto, false);
-
-            // Also create a Pedido for compatibility (without transaction)
-            try
-            {
-                var pedidoDto = new CrearPedidoDTO
-                {
-                    ClienteId = syncDto.ClienteId ?? "cliente-pos",
-                    FechaPedido = syncDto.FechaVenta,
-                    Estado = EstadoPedido.Entregado.ToString(),
-                    MetodoPago = syncDto.MetodoPago,
-                    Total = syncDto.Total,
-                    NumeroOrden = syncDto.NumeroOrden,
-                    TerminalId = syncDto.TerminalId,
-                    Detalles = syncDto.Detalles.Select(d => new CrearPedidoDetalleDTO
+                TerminalId = null, // Temporarily set to null to avoid any casting issues
+                Detalles = syncDto.Detalles
+                    .Where(d =>
+                    {
+                        if (string.IsNullOrEmpty(d.ProductoApiId))
+                        {
+                            Console.WriteLine($"Skipping detail with empty ProductoApiId for sync order {syncDto.NumeroOrden}");
+                            return false;
+                        }
+                        if (!Guid.TryParse(d.ProductoApiId, out _))
+                        {
+                            Console.WriteLine($"Skipping detail with invalid GUID ProductoApiId: '{d.ProductoApiId}' for sync order {syncDto.NumeroOrden}");
+                            return false;
+                        }
+                        return true;
+                    })
+                    .Select(d => new CrearVentaDetalleDTO
                     {
                         ProductoId = Guid.Parse(d.ProductoApiId),
                         Cantidad = d.Cantidad,
-                        PrecioUnitario = d.PrecioUnitario,
-                        Subtotal = d.Cantidad * d.PrecioUnitario
+                        PrecioUnitario = d.PrecioUnitario
                     }).ToList()
-                };
+            };
 
-                var pedido = await _pedidoService.CreatePedidoAsync(pedidoDto);
-
-                // Link the venta to the pedido
-                var ventaEntity = await _context.Ventas.FindAsync(venta.Id);
-                if (ventaEntity != null)
-                {
-                    ventaEntity.PedidoId = pedido.Id;
-                    await _context.SaveChangesAsync();
-                }
-            }
-            catch (Exception ex)
+            // If all details are skipped, return a descriptive error
+            if (createVentaDto.Detalles == null || !createVentaDto.Detalles.Any())
             {
-                // Log the error but don't fail the sale creation
-                // The sale was created successfully, just couldn't link to pedido
-                Console.WriteLine($"Warning: Could not create linked pedido: {ex.Message}");
+                throw new InvalidOperationException("All Detalles have invalid or missing ProductoApiId. Each ProductoApiId must be a valid GUID.");
             }
+
+            var venta = await CreateVentaAsync(createVentaDto, false);
 
             return venta;
         }
@@ -428,6 +412,29 @@ namespace PizzaCoreAPI.Services
                     PrecioUnitario = d.PrecioUnitario,
                     Subtotal = d.Subtotal
                 }).ToList() ?? new List<VentaDetalleDTO>()
+            };
+        }
+
+        private static MetodoPago ParseMetodoPago(string metodoPagoStr)
+        {
+            if (string.IsNullOrWhiteSpace(metodoPagoStr))
+                return MetodoPago.Efectivo;
+
+            // If it's a number, parse it as enum value
+            if (int.TryParse(metodoPagoStr, out var metodoPagoInt))
+            {
+                if (Enum.IsDefined(typeof(MetodoPago), metodoPagoInt))
+                    return (MetodoPago)metodoPagoInt;
+                return MetodoPago.Efectivo;
+            }
+
+            // If it's a string, try to parse it as enum name or convert common strings
+            return metodoPagoStr.ToLower().Trim() switch
+            {
+                "efectivo" => MetodoPago.Efectivo,
+                "tarjeta" => MetodoPago.Tarjeta,
+                "transferencia" => MetodoPago.Transferencia,
+                _ => Enum.TryParse<MetodoPago>(metodoPagoStr, ignoreCase: true, out var parsed) ? parsed : MetodoPago.Efectivo
             };
         }
     }

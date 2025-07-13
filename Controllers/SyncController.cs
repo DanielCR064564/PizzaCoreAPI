@@ -80,6 +80,14 @@ namespace PizzaCoreAPI.Controllers
                     return BadRequest(new { success = false, error = "Invalid sale data" });
                 }
 
+                // Log the incoming data for debugging
+                _logger.LogInformation($"Receiving venta sync for order: {venta.NumeroOrden}");
+                _logger.LogInformation($"Detalles count: {venta.Detalles.Count}");
+                foreach (var detalle in venta.Detalles)
+                {
+                    _logger.LogInformation($"ProductoApiId: '{detalle.ProductoApiId}', Cantidad: {detalle.Cantidad}");
+                }
+
                 // Create the sale using the new VentaService
                 var result = await _ventaService.CreateVentaFromSyncAsync(venta);
 
@@ -93,7 +101,7 @@ namespace PizzaCoreAPI.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error receiving sale from POS");
+                _logger.LogError(ex, "Error receiving sale from POS for order: {NumeroOrden}", venta?.NumeroOrden ?? "Unknown");
                 return BadRequest(new { success = false, error = ex.Message });
             }
         }

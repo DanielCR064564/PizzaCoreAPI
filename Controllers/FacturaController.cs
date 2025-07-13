@@ -44,9 +44,9 @@ namespace PizzaCoreAPI.Controllers
             try
             {
                 var factura = await _facturaService.GetFacturaByIdAsync(id);
-                if (factura == null) 
+                if (factura == null)
                     return NotFound(new { message = "Factura no encontrada" });
-                
+
                 return Ok(factura);
             }
             catch (Exception ex)
@@ -64,9 +64,9 @@ namespace PizzaCoreAPI.Controllers
             try
             {
                 var factura = await _facturaService.GetFacturaByPedidoIdAsync(pedidoId);
-                if (factura == null) 
+                if (factura == null)
                     return NotFound(new { message = "No se encontró factura para este pedido" });
-                
+
                 return Ok(factura);
             }
             catch (Exception ex)
@@ -97,7 +97,7 @@ namespace PizzaCoreAPI.Controllers
         /// </summary>
         [HttpGet("fecha")]
         public async Task<ActionResult<IEnumerable<FacturaDTO>>> GetFacturasByFecha(
-            [FromQuery] DateTime fechaInicio, 
+            [FromQuery] DateTime fechaInicio,
             [FromQuery] DateTime fechaFin)
         {
             try
@@ -148,10 +148,10 @@ namespace PizzaCoreAPI.Controllers
             {
                 var estado = Enum.Parse<EstadoFactura>(dto.Estado, ignoreCase: true);
                 var result = await _facturaService.UpdateEstadoFacturaAsync(id, estado);
-                
-                if (!result) 
+
+                if (!result)
                     return NotFound(new { message = "Factura no encontrada" });
-                
+
                 return NoContent();
             }
             catch (ArgumentException)
@@ -178,9 +178,9 @@ namespace PizzaCoreAPI.Controllers
             {
                 var pdf = await _facturaService.GenerarFacturaPDFAsync(id);
                 var factura = await _facturaService.GetFacturaByIdAsync(id);
-                
+
                 var fileName = $"Factura_{factura?.NumeroFactura ?? id.ToString()}.pdf";
-                
+
                 return File(pdf, "application/pdf", fileName);
             }
             catch (InvalidOperationException ex)
@@ -202,9 +202,9 @@ namespace PizzaCoreAPI.Controllers
             try
             {
                 var pdf = await _facturaService.GenerarFacturaPDFAsync(id);
-                
+
                 // Return PDF for inline viewing
-                Response.Headers.Add("Content-Disposition", "inline");
+                Response.Headers.Append("Content-Disposition", "inline");
                 return File(pdf, "application/pdf");
             }
             catch (InvalidOperationException ex)
