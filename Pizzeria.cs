@@ -72,9 +72,15 @@ builder.Services.AddIdentity<Usuario, Rol>()
     .AddEntityFrameworkStores<PizzaDbContext>()
     .AddDefaultTokenProviders();
 
-// DB Context
+// Dbcontext
 builder.Services.AddDbContext<PizzaDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("PizzaDb")));
+    options.UseMySql(
+        builder.Configuration.GetConnectionString("PizzaDb"),
+        ServerVersion.AutoDetect(builder.Configuration.GetConnectionString("PizzaDb")),
+        mysqlOptions => {
+            mysqlOptions.EnableRetryOnFailure();
+        }
+    ));
 
 // JWT
 builder.Services.AddAuthentication(options =>
