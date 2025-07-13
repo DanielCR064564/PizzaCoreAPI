@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using PizzaCoreAPI.Data;
 using PizzaCoreAPI.DTOs;
 using PizzaCoreAPI.Models;
+using PizzaCoreAPI.Interfaces;
 using DinkToPdf;
 using DinkToPdf.Contracts;
 
@@ -92,7 +93,7 @@ namespace PizzaCoreAPI.Services
                 .Include(f => f.Pedido)
                 .ThenInclude(p => p.Detalles)
                 .ThenInclude(d => d.Producto)
-                .Where(f => f.FechaEmision.Date >= fechaInicio.Date && 
+                .Where(f => f.FechaEmision.Date >= fechaInicio.Date &&
                            f.FechaEmision.Date <= fechaFin.Date)
                 .OrderByDescending(f => f.FechaEmision)
                 .ToListAsync();
@@ -154,7 +155,7 @@ namespace PizzaCoreAPI.Services
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
 
-                return await GetFacturaByIdAsync(factura.Id) ?? 
+                return await GetFacturaByIdAsync(factura.Id) ??
                        throw new InvalidOperationException("Error retrieving created invoice");
             }
             catch
@@ -199,15 +200,15 @@ namespace PizzaCoreAPI.Services
                         PagesCount = true,
                         HtmlContent = html,
                         WebSettings = { DefaultEncoding = "utf-8" },
-                        HeaderSettings = { 
-                            FontSize = 9, 
-                            Right = "Página [page] de [toPage]", 
+                        HeaderSettings = {
+                            FontSize = 9,
+                            Right = "Página [page] de [toPage]",
                             Line = true,
                             Spacing = 2.812
                         },
-                        FooterSettings = { 
-                            FontSize = 9, 
-                            Line = true, 
+                        FooterSettings = {
+                            FontSize = 9,
+                            Line = true,
                             Center = "Pizza Restaurant - Sistema de Facturación",
                             Spacing = 2.812
                         }

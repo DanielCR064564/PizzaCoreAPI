@@ -14,7 +14,7 @@ namespace PizzaCoreAPI.DTOs
         public string? MetodoPago { get; set; }
         public string? Notas { get; set; }
         public List<PedidoDetalleDTO> Detalles { get; set; } = new();
-        
+
         // Additional computed properties
         public int TotalProductos => Detalles.Sum(d => d.Cantidad);
         public bool RequiereEntrega => !string.IsNullOrEmpty(EmpleadoId);
@@ -50,7 +50,7 @@ namespace PizzaCoreAPI.DTOs
         public string? EmpleadoId { get; set; }
 
         [Required(ErrorMessage = "El estado es requerido")]
-        [RegularExpression("^(Pendiente|EnPreparacion|Listo|EnCamino|Entregado|Cancelado)$", 
+        [RegularExpression("^(Pendiente|EnPreparacion|Listo|EnCamino|Entregado|Cancelado)$",
             ErrorMessage = "Estado debe ser: Pendiente, EnPreparacion, Listo, EnCamino, Entregado, o Cancelado")]
         public string Estado { get; set; } = "Pendiente";
 
@@ -124,7 +124,7 @@ namespace PizzaCoreAPI.DTOs
     public class ActualizarEstadoPedidoDTO
     {
         [Required(ErrorMessage = "El estado es requerido")]
-        [RegularExpression("^(Pendiente|EnPreparacion|Listo|EnCamino|Entregado|Cancelado)$", 
+        [RegularExpression("^(Pendiente|EnPreparacion|Listo|EnCamino|Entregado|Cancelado)$",
             ErrorMessage = "Estado debe ser: Pendiente, EnPreparacion, Listo, EnCamino, Entregado, o Cancelado")]
         public string Estado { get; set; } = string.Empty;
 
@@ -132,6 +132,24 @@ namespace PizzaCoreAPI.DTOs
         public string? Observacion { get; set; }
 
         public DateTime? FechaEstimadaEntrega { get; set; }
+    }
+
+    public class ActualizarPedidoDTO
+    {
+        [StringLength(255, ErrorMessage = "El ID del empleado no puede exceder 255 caracteres")]
+        public string? EmpleadoId { get; set; }
+
+        [RegularExpression("^(Pendiente|EnPreparacion|Listo|EnCamino|Entregado|Cancelado)$",
+            ErrorMessage = "Estado debe ser: Pendiente, EnPreparacion, Listo, EnCamino, Entregado, o Cancelado")]
+        public string? Estado { get; set; }
+
+        [StringLength(50, ErrorMessage = "El método de pago no puede exceder 50 caracteres")]
+        public string? MetodoPago { get; set; }
+
+        [StringLength(500, ErrorMessage = "Las notas no pueden exceder 500 caracteres")]
+        public string? Notas { get; set; }
+
+        public DateTime? FechaEntrega { get; set; }
     }
 
     // DTO for order summary/statistics
