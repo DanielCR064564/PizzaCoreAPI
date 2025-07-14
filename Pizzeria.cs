@@ -123,6 +123,7 @@ builder.Services.AddScoped<IPedidoService, PedidoService>();
 builder.Services.AddScoped<IFacturaService, FacturaService>();
 builder.Services.AddScoped<IClienteService, ClienteService>();
 builder.Services.AddScoped<IVentaService, VentaService>();
+builder.Services.AddScoped<ProductoSyncService>();
 builder.Services.AddScoped<RoleInitializer>();
 
 builder.Services.Configure<ApiBehaviorOptions>(options =>

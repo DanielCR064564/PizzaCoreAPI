@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using PizzaCoreAPI.DTOs;
 using PizzaCoreAPI.Interfaces;
 using PizzaCoreAPI.Models;
+using PizzaCoreAPI.Services;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -19,17 +20,20 @@ namespace PizzaCoreAPI.Controllers
         private readonly IPedidoService _pedidoService;
         private readonly IVentaService _ventaService;
         private readonly ILogger<SyncController> _logger;
+        private readonly ProductoSyncService _productoSyncService;
 
         public SyncController(
             IProductoService productoService,
             IPedidoService pedidoService,
             IVentaService ventaService,
-            ILogger<SyncController> logger)
+            ILogger<SyncController> logger,
+            ProductoSyncService productoSyncService)
         {
             _productoService = productoService;
             _pedidoService = pedidoService;
             _ventaService = ventaService;
             _logger = logger;
+            _productoSyncService = productoSyncService;
         }
 
         [HttpGet("health")]
@@ -48,19 +52,8 @@ namespace PizzaCoreAPI.Controllers
         {
             try
             {
-                var productos = await _productoService.GetAllProductosAsync();
-                var response = productos.Select(p => new ProductoSyncDTO
-                {
-                    Id = p.Id.ToString(),
-                    Nombre = p.Nombre,
-                    Precio = p.Precio,
-                    Descripcion = p.Descripcion,
-                    Disponible = p.Disponible,
-                    Tipo = p.Tipo,
-                    FechaActualizacion = p.FechaActualizacion
-                }).ToList();
-
-                return Ok(response);
+                var productos = await _productoSyncService.GetAllProductosForSyncAsync();
+                return Ok(productos);
             }
             catch (Exception ex)
             {
@@ -82,7 +75,7 @@ namespace PizzaCoreAPI.Controllers
                 // Enhanced logging for debugging
                 _logger.LogInformation($"Receiving venta sync - Order: {venta.NumeroOrden}, MetodoPago: '{venta.MetodoPago}', TerminalId: '{venta.TerminalId}'");
                 _logger.LogInformation($"Detalles count: {venta.Detalles.Count}");
-                
+
                 foreach (var detalle in venta.Detalles)
                 {
                     _logger.LogInformation($"ProductoApiId: '{detalle.ProductoApiId}', Cantidad: {detalle.Cantidad}, Precio: {detalle.PrecioUnitario}");

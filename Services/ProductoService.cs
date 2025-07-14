@@ -22,7 +22,7 @@ namespace PizzaCoreAPI.Services
         public async Task<List<ProductoDTO>> GetAllProductosAsync()
         {
             var productos = await _context.Productos
-                .Include(p => p.Ingredientes)
+                .AsNoTracking()
                 .ToListAsync();
 
             return productos.Select(p => new ProductoDTO
@@ -41,13 +41,7 @@ namespace PizzaCoreAPI.Services
                 Imagen = p.Imagen,
                 IngredientesTexto = p.IngredientesTexto,
                 TiempoPreparacion = p.TiempoPreparacion,
-                Ingredientes = p.Ingredientes.Select(i => new IngredienteDTO
-                {
-                    Id = i.Id,
-                    Nombre = i.Nombre,
-                    PrecioAdicional = i.PrecioAdicional,
-                    Tipo = i.Tipo.ToString()
-                }).ToList()
+                Ingredientes = new List<IngredienteDTO>() // Empty for now
             }).ToList();
         }
 
