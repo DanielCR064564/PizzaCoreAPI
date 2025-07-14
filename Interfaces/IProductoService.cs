@@ -8,7 +8,7 @@ namespace PizzaCoreAPI.Interfaces
     public interface IProductoService
     {
         Task<List<ProductoDTO>> GetAllProductosAsync();
-        Task<ProductoDTO> GetProductoByIdAsync(Guid id);
+        Task<ProductoDTO?> GetProductoByIdAsync(Guid id);
         Task<ProductoDTO> CreateProductoAsync(CrearProductoDTO productoDto);
         Task UpdateProductoAsync(Guid id, CrearProductoDTO productoDto);
         Task DeleteProductoAsync(Guid id);

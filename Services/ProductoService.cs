@@ -33,6 +33,14 @@ namespace PizzaCoreAPI.Services
                 Precio = p.Precio,
                 Tipo = p.Tipo.ToString(),
                 Disponible = p.Disponible,
+                Stock = p.Stock,
+                FechaCreacion = p.FechaCreacion,
+                FechaActualizacion = p.FechaActualizacion,
+                ApiId = p.ApiId,
+                SincronizadoConAPI = p.SincronizadoConAPI,
+                Imagen = p.Imagen,
+                IngredientesTexto = p.IngredientesTexto,
+                TiempoPreparacion = p.TiempoPreparacion,
                 Ingredientes = p.Ingredientes.Select(i => new IngredienteDTO
                 {
                     Id = i.Id,
@@ -43,7 +51,7 @@ namespace PizzaCoreAPI.Services
             }).ToList();
         }
 
-        public async Task<ProductoDTO> GetProductoByIdAsync(Guid id)
+        public async Task<ProductoDTO?> GetProductoByIdAsync(Guid id)
         {
             var producto = await _context.Productos
                 .Include(p => p.Ingredientes)
@@ -60,6 +68,14 @@ namespace PizzaCoreAPI.Services
                 Precio = producto.Precio,
                 Tipo = producto.Tipo.ToString(),
                 Disponible = producto.Disponible,
+                Stock = producto.Stock,
+                FechaCreacion = producto.FechaCreacion,
+                FechaActualizacion = producto.FechaActualizacion,
+                ApiId = producto.ApiId,
+                SincronizadoConAPI = producto.SincronizadoConAPI,
+                Imagen = producto.Imagen,
+                IngredientesTexto = producto.IngredientesTexto,
+                TiempoPreparacion = producto.TiempoPreparacion,
                 Ingredientes = producto.Ingredientes.Select(i => new IngredienteDTO
                 {
                     Id = i.Id,
