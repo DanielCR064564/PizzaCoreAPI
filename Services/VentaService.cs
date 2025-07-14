@@ -3,6 +3,7 @@ using PizzaCoreAPI.Data;
 using PizzaCoreAPI.DTOs;
 using PizzaCoreAPI.Models;
 using PizzaCoreAPI.Interfaces;
+using Microsoft.IdentityModel.Tokens;
 
 namespace PizzaCoreAPI.Services
 {
@@ -11,12 +12,14 @@ namespace PizzaCoreAPI.Services
         private readonly PizzaDbContext _context;
         private readonly IPedidoService _pedidoService;
         private readonly IFacturaService _facturaService;
+        private readonly ILogger<VentaService> _logger;
 
-        public VentaService(PizzaDbContext context, IPedidoService pedidoService, IFacturaService facturaService)
+        public VentaService(PizzaDbContext context, IPedidoService pedidoService, IFacturaService facturaService, ILogger<VentaService> logger)
         {
             _context = context;
             _pedidoService = pedidoService;
             _facturaService = facturaService;
+            _logger = logger;
         }
 
         public async Task<IEnumerable<VentaDTO>> GetAllVentasAsync()
@@ -32,7 +35,7 @@ namespace PizzaCoreAPI.Services
             return ventas.Select(MapToDTO);
         }
 
-        public async Task<VentaDTO?> GetVentaByIdAsync(Guid id)
+        public async Task<VentaDTO?> GetVentaByIdAsync(string id)
         {
             var venta = await _context.Ventas
                 .Include(v => v.Cliente)
@@ -138,7 +141,7 @@ namespace PizzaCoreAPI.Services
                     // Create sale
                     var venta = new Venta
                     {
-                        Id = Guid.NewGuid(),
+                        Id = Guid.NewGuid().ToString(),
                         NumeroOrden = dto.NumeroOrden,
                         ClienteId = validateClients ? dto.ClienteId : null,
                         EmpleadoId = validateClients ? dto.EmpleadoId : null,
@@ -146,7 +149,9 @@ namespace PizzaCoreAPI.Services
                         MetodoPago = ParseMetodoPago(dto.MetodoPago),
                         TerminalId = dto.TerminalId,
                         Estado = EstadoVenta.Completada,
-                        Total = 0
+                        Total = 0,
+                        PedidoId = null,
+                        FacturaId = null
                     };
 
                     _context.Ventas.Add(venta);
@@ -162,9 +167,9 @@ namespace PizzaCoreAPI.Services
 
                         var detalle = new VentaDetalle
                         {
-                            Id = Guid.NewGuid(),
+                            Id = Guid.NewGuid().ToString(),
                             VentaId = venta.Id,
-                            ProductoId = detalleDto.ProductoId,
+                            ProductoId = detalleDto.ProductoId, // Keep as Guid - matches Productos table
                             Cantidad = detalleDto.Cantidad,
                             PrecioUnitario = detalleDto.PrecioUnitario > 0 ? detalleDto.PrecioUnitario : producto.Precio,
                             Subtotal = (detalleDto.PrecioUnitario > 0 ? detalleDto.PrecioUnitario : producto.Precio) * detalleDto.Cantidad
@@ -198,97 +203,35 @@ namespace PizzaCoreAPI.Services
             if (existingVenta != null)
                 return MapToDTO(existingVenta);
 
-            // Create the sale without nested transactions
             var createVentaDto = new CrearVentaDTO
             {
                 NumeroOrden = syncDto.NumeroOrden,
-                ClienteId = null, // Don't set ClienteId for sync to avoid foreign key issues
-                EmpleadoId = null, // Don't set EmpleadoId for sync to avoid foreign key issues
+                ClienteId = null, // Don't set for sync to avoid foreign key issues
+                EmpleadoId = null, // Don't set for sync to avoid foreign key issues
                 FechaVenta = syncDto.FechaVenta,
                 Total = syncDto.Total,
                 MetodoPago = syncDto.MetodoPago,
-                TerminalId = null, // Temporarily set to null to avoid any casting issues
+                TerminalId = null, // Set to null to avoid issues
                 Detalles = syncDto.Detalles
-                    .Where(d =>
-                    {
-                        if (string.IsNullOrEmpty(d.ProductoApiId))
-                        {
-                            Console.WriteLine($"Skipping detail with empty ProductoApiId for sync order {syncDto.NumeroOrden}");
-                            return false;
-                        }
-                        if (!Guid.TryParse(d.ProductoApiId, out _))
-                        {
-                            Console.WriteLine($"Skipping detail with invalid GUID ProductoApiId: '{d.ProductoApiId}' for sync order {syncDto.NumeroOrden}");
-                            return false;
-                        }
-                        return true;
-                    })
+                    .Where(d => !string.IsNullOrEmpty(d.ProductoApiId) && Guid.TryParse(d.ProductoApiId, out _))
                     .Select(d => new CrearVentaDetalleDTO
                     {
-                        ProductoId = Guid.Parse(d.ProductoApiId),
+                        ProductoId = Guid.Parse(d.ProductoApiId), // Convert string to Guid for ProductoId
                         Cantidad = d.Cantidad,
                         PrecioUnitario = d.PrecioUnitario
                     }).ToList()
             };
 
-            // If all details are skipped, return a descriptive error
             if (createVentaDto.Detalles == null || !createVentaDto.Detalles.Any())
             {
-                throw new InvalidOperationException("All Detalles have invalid or missing ProductoApiId. Each ProductoApiId must be a valid GUID.");
+                throw new InvalidOperationException("All Detalles have invalid or missing ProductoApiId.");
             }
 
             var venta = await CreateVentaAsync(createVentaDto, false);
-
             return venta;
         }
 
-        private async Task<VentaDTO> CreateVentaFromDtoInTransactionAsync(CrearVentaDTO dto)
-        {
-            var venta = new Venta
-            {
-                Id = Guid.NewGuid(),
-                NumeroOrden = dto.NumeroOrden,
-                ClienteId = dto.ClienteId,
-                EmpleadoId = dto.EmpleadoId,
-                FechaVenta = dto.FechaVenta,
-                MetodoPago = Enum.Parse<MetodoPago>(dto.MetodoPago, ignoreCase: true),
-                TerminalId = dto.TerminalId,
-                Estado = EstadoVenta.Completada,
-                Total = 0
-            };
-
-            _context.Ventas.Add(venta);
-            await _context.SaveChangesAsync();
-
-            // Create sale details
-            decimal total = 0;
-            foreach (var detalleDto in dto.Detalles)
-            {
-                var producto = await _context.Productos.FindAsync(detalleDto.ProductoId);
-                if (producto == null)
-                    throw new InvalidOperationException($"Producto {detalleDto.ProductoId} no encontrado");
-
-                var detalle = new VentaDetalle
-                {
-                    Id = Guid.NewGuid(),
-                    VentaId = venta.Id,
-                    ProductoId = detalleDto.ProductoId,
-                    Cantidad = detalleDto.Cantidad,
-                    PrecioUnitario = detalleDto.PrecioUnitario > 0 ? detalleDto.PrecioUnitario : producto.Precio,
-                    Subtotal = (detalleDto.PrecioUnitario > 0 ? detalleDto.PrecioUnitario : producto.Precio) * detalleDto.Cantidad
-                };
-
-                total += detalle.Subtotal;
-                _context.VentaDetalles.Add(detalle);
-            }
-
-            venta.Total = total;
-            await _context.SaveChangesAsync();
-
-            return MapToDTO(venta);
-        }
-
-        public async Task<bool> UpdateVentaAsync(Guid id, CrearVentaDTO dto)
+        public async Task<bool> UpdateVentaAsync(string id, CrearVentaDTO dto)
         {
             var venta = await _context.Ventas
                 .Include(v => v.Detalles)
@@ -309,7 +252,7 @@ namespace PizzaCoreAPI.Services
                 {
                     // Update basic properties
                     venta.EmpleadoId = dto.EmpleadoId;
-                    venta.MetodoPago = Enum.Parse<MetodoPago>(dto.MetodoPago, ignoreCase: true);
+                    venta.MetodoPago = ParseMetodoPago(dto.MetodoPago);
                     venta.TerminalId = dto.TerminalId;
                     venta.FechaActualizacion = DateTime.Now;
 
@@ -329,9 +272,9 @@ namespace PizzaCoreAPI.Services
 
                             var detalle = new VentaDetalle
                             {
-                                Id = Guid.NewGuid(),
+                                Id = Guid.NewGuid().ToString(),
                                 VentaId = venta.Id,
-                                ProductoId = detalleDto.ProductoId,
+                                ProductoId = detalleDto.ProductoId, // Keep as Guid
                                 Cantidad = detalleDto.Cantidad,
                                 PrecioUnitario = detalleDto.PrecioUnitario > 0 ? detalleDto.PrecioUnitario : producto.Precio,
                                 Subtotal = (detalleDto.PrecioUnitario > 0 ? detalleDto.PrecioUnitario : producto.Precio) * detalleDto.Cantidad
@@ -356,7 +299,7 @@ namespace PizzaCoreAPI.Services
             });
         }
 
-        public async Task<bool> DeleteVentaAsync(Guid id)
+        public async Task<bool> DeleteVentaAsync(string id)
         {
             var venta = await _context.Ventas.FindAsync(id);
             if (venta == null) return false;
@@ -370,7 +313,7 @@ namespace PizzaCoreAPI.Services
             return true;
         }
 
-        public async Task<bool> CancelarVentaAsync(Guid id)
+        public async Task<bool> CancelarVentaAsync(string id)
         {
             var venta = await _context.Ventas.FindAsync(id);
             if (venta == null) return false;
@@ -389,7 +332,7 @@ namespace PizzaCoreAPI.Services
         {
             return new VentaDTO
             {
-                Id = venta.Id,
+                Id = Guid.Parse(venta.Id), // Convert string ID back to Guid for DTO compatibility
                 NumeroOrden = venta.NumeroOrden,
                 ClienteId = venta.ClienteId,
                 ClienteNombre = venta.Cliente?.NombreCompleto,
@@ -401,12 +344,12 @@ namespace PizzaCoreAPI.Services
                 TerminalId = venta.TerminalId,
                 Estado = venta.Estado.ToString(),
                 PedidoId = venta.PedidoId,
-                FacturaId = venta.FacturaId,
+                FacturaId = string.IsNullOrEmpty(venta.FacturaId?.ToString()) ? null : Guid.Parse(venta.FacturaId!.ToString()),
                 FechaCreacion = venta.FechaCreacion,
                 Detalles = venta.Detalles?.Select(d => new VentaDetalleDTO
                 {
-                    Id = d.Id,
-                    ProductoId = d.ProductoId,
+                    Id = Guid.Parse(d.Id), // Convert string ID back to Guid for DTO compatibility
+                    ProductoId = d.ProductoId, // ProductoId remains Guid
                     ProductoNombre = d.Producto?.Nombre ?? "",
                     Cantidad = d.Cantidad,
                     PrecioUnitario = d.PrecioUnitario,

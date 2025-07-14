@@ -39,7 +39,7 @@ namespace PizzaCoreAPI.Controllers
         /// Gets a specific sale by ID
         /// </summary>
         [HttpGet("{id}")]
-        public async Task<ActionResult<VentaDTO>> GetVenta(Guid id)
+        public async Task<ActionResult<VentaDTO>> GetVenta(string id)
         {
             try
             {
@@ -137,7 +137,7 @@ namespace PizzaCoreAPI.Controllers
             try
             {
                 var venta = await _ventaService.CreateVentaAsync(dto);
-                return CreatedAtAction(nameof(GetVenta), new { id = venta.Id }, venta);
+                return CreatedAtAction(nameof(GetVenta), new { id = venta.Id.ToString() }, venta);
             }
             catch (InvalidOperationException ex)
             {
@@ -153,7 +153,7 @@ namespace PizzaCoreAPI.Controllers
         /// Updates a sale
         /// </summary>
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateVenta(Guid id, [FromBody] CrearVentaDTO dto)
+        public async Task<IActionResult> UpdateVenta(string id, [FromBody] CrearVentaDTO dto)
         {
             try
             {
@@ -177,7 +177,7 @@ namespace PizzaCoreAPI.Controllers
         /// Cancels a sale
         /// </summary>
         [HttpPut("{id}/cancelar")]
-        public async Task<IActionResult> CancelarVenta(Guid id)
+        public async Task<IActionResult> CancelarVenta(string id)
         {
             try
             {
@@ -201,7 +201,7 @@ namespace PizzaCoreAPI.Controllers
         /// Deletes a sale
         /// </summary>
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteVenta(Guid id)
+        public async Task<IActionResult> DeleteVenta(string id)
         {
             try
             {

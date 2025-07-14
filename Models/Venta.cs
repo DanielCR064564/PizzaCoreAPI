@@ -5,7 +5,7 @@ namespace PizzaCoreAPI.Models
     public class Venta
     {
         [Key]
-        public Guid Id { get; set; } = Guid.NewGuid();
+        public string Id { get; set; } = Guid.NewGuid().ToString();
         
         [Required]
         public string NumeroOrden { get; set; } = string.Empty;
@@ -47,10 +47,10 @@ namespace PizzaCoreAPI.Models
     public class VentaDetalle
     {
         [Key]
-        public Guid Id { get; set; } = Guid.NewGuid();
+        public string Id { get; set; } = Guid.NewGuid().ToString();
         
         [Required]
-        public Guid VentaId { get; set; }
+        public string VentaId  { get; set; } = string.Empty;
         public Venta Venta { get; set; } = null!;
         
         [Required]

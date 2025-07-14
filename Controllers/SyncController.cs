@@ -74,35 +74,52 @@ namespace PizzaCoreAPI.Controllers
         {
             try
             {
-                // Validate input
                 if (venta == null || venta.Detalles == null || !venta.Detalles.Any())
                 {
                     return BadRequest(new { success = false, error = "Invalid sale data" });
                 }
 
-                // Log the incoming data for debugging
-                _logger.LogInformation($"Receiving venta sync for order: {venta.NumeroOrden}");
+                // Enhanced logging for debugging
+                _logger.LogInformation($"Receiving venta sync - Order: {venta.NumeroOrden}, MetodoPago: '{venta.MetodoPago}', TerminalId: '{venta.TerminalId}'");
                 _logger.LogInformation($"Detalles count: {venta.Detalles.Count}");
+                
                 foreach (var detalle in venta.Detalles)
                 {
-                    _logger.LogInformation($"ProductoApiId: '{detalle.ProductoApiId}', Cantidad: {detalle.Cantidad}");
+                    _logger.LogInformation($"ProductoApiId: '{detalle.ProductoApiId}', Cantidad: {detalle.Cantidad}, Precio: {detalle.PrecioUnitario}");
                 }
 
-                // Create the sale using the new VentaService
+                // Validate TerminalId format if provided
+                if (!string.IsNullOrEmpty(venta.TerminalId) && !Guid.TryParse(venta.TerminalId, out _))
+                {
+                    _logger.LogWarning($"Invalid TerminalId format: {venta.TerminalId}");
+                }
+
                 var result = await _ventaService.CreateVentaFromSyncAsync(venta);
+
+                _logger.LogInformation($"Venta created successfully with ID: {result.Id}");
 
                 return Ok(new
                 {
                     success = true,
-                    ventaId = result.Id,
+                    ventaId = result.Id.ToString(), // Convert Guid to string for response
                     pedidoId = result.PedidoId,
                     numeroOrden = result.NumeroOrden
                 });
             }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogError(ex, "Business logic error for order: {NumeroOrden}", venta?.NumeroOrden ?? "Unknown");
+                return BadRequest(new { success = false, error = ex.Message, type = "business_error" });
+            }
+            catch (FormatException ex)
+            {
+                _logger.LogError(ex, "Format error for order: {NumeroOrden}", venta?.NumeroOrden ?? "Unknown");
+                return BadRequest(new { success = false, error = "Invalid data format", details = ex.Message, type = "format_error" });
+            }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error receiving sale from POS for order: {NumeroOrden}", venta?.NumeroOrden ?? "Unknown");
-                return BadRequest(new { success = false, error = ex.Message });
+                _logger.LogError(ex, "Unexpected error for order: {NumeroOrden}", venta?.NumeroOrden ?? "Unknown");
+                return BadRequest(new { success = false, error = "Internal server error", type = "server_error" });
             }
         }
 
