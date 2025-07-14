@@ -209,7 +209,6 @@ namespace PizzaCoreAPI.Data
                     .IsRequired();
 
                 entity.Property(vd => vd.ProductoId)
-                    .HasColumnType("char(36)")
                     .IsRequired();
 
                 entity.Property(vd => vd.PrecioUnitario)
