@@ -248,11 +248,11 @@ namespace PizzaCoreAPI.Data
                 .WithMany()
                 .HasForeignKey(f => f.PedidoId)
                 .OnDelete(DeleteBehavior.Cascade);
-
+                
             // Temporarily ignore navigation properties to fix model configuration issues
             modelBuilder.Entity<Ingrediente>()
                 .Ignore(i => i.Productos);
-
+                
             modelBuilder.Entity<Producto>()
                 .Ignore(p => p.Ingredientes);
         }

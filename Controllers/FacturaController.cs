@@ -8,7 +8,6 @@ namespace PizzaCoreAPI.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Roles = "Empleado,Administrador")]
     public class FacturasController : ControllerBase
     {
         private readonly IFacturaService _facturaService;
