@@ -169,7 +169,7 @@ namespace PizzaCoreAPI.Services
                         {
                             Id = Guid.NewGuid().ToString(),
                             VentaId = venta.Id,
-                            ProductoId = detalleDto.ProductoId, // Keep as Guid - matches Productos table
+                            ProductoId = detalleDto.ProductoId, // Direct Guid assignment
                             Cantidad = detalleDto.Cantidad,
                             PrecioUnitario = detalleDto.PrecioUnitario > 0 ? detalleDto.PrecioUnitario : producto.Precio,
                             Subtotal = (detalleDto.PrecioUnitario > 0 ? detalleDto.PrecioUnitario : producto.Precio) * detalleDto.Cantidad
@@ -274,7 +274,7 @@ namespace PizzaCoreAPI.Services
                             {
                                 Id = Guid.NewGuid().ToString(),
                                 VentaId = venta.Id,
-                                ProductoId = detalleDto.ProductoId, // Keep as Guid
+                                ProductoId = detalleDto.ProductoId, // Direct Guid assignment
                                 Cantidad = detalleDto.Cantidad,
                                 PrecioUnitario = detalleDto.PrecioUnitario > 0 ? detalleDto.PrecioUnitario : producto.Precio,
                                 Subtotal = (detalleDto.PrecioUnitario > 0 ? detalleDto.PrecioUnitario : producto.Precio) * detalleDto.Cantidad
@@ -349,7 +349,7 @@ namespace PizzaCoreAPI.Services
                 Detalles = venta.Detalles?.Select(d => new VentaDetalleDTO
                 {
                     Id = Guid.Parse(d.Id), // Convert string ID back to Guid for DTO compatibility
-                    ProductoId = d.ProductoId, // ProductoId remains Guid
+                    ProductoId = d.ProductoId, // Direct Guid assignment
                     ProductoNombre = d.Producto?.Nombre ?? "",
                     Cantidad = d.Cantidad,
                     PrecioUnitario = d.PrecioUnitario,

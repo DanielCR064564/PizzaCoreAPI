@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace PizzaCoreAPI.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialMySQLMigrationV3 : Migration
+    public partial class InitialMigration : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -40,13 +40,13 @@ namespace PizzaCoreAPI.Migrations
                 {
                     Id = table.Column<string>(type: "varchar(255)", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
-                    NombreCompleto = table.Column<string>(type: "varchar(200)", maxLength: 200, nullable: false)
+                    NombreCompleto = table.Column<string>(type: "longtext", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
-                    RNC = table.Column<string>(type: "varchar(20)", maxLength: 20, nullable: false)
+                    RNC = table.Column<string>(type: "longtext", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
-                    Cargo = table.Column<string>(type: "varchar(100)", maxLength: 100, nullable: false)
+                    Cargo = table.Column<string>(type: "longtext", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
-                    Direccion = table.Column<string>(type: "varchar(500)", maxLength: 500, nullable: false)
+                    Direccion = table.Column<string>(type: "longtext", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     EsEmpleado = table.Column<bool>(type: "tinyint(1)", nullable: false),
                     UserName = table.Column<string>(type: "varchar(256)", maxLength: 256, nullable: true)
@@ -90,7 +90,7 @@ namespace PizzaCoreAPI.Migrations
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     MontoPendiente = table.Column<decimal>(type: "decimal(10,2)", nullable: false),
                     FechaVencimiento = table.Column<DateTime>(type: "datetime(6)", nullable: false),
-                    Estado = table.Column<string>(type: "longtext", nullable: false)
+                    Estado = table.Column<string>(type: "varchar(50)", maxLength: 50, nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4")
                 },
                 constraints: table =>
@@ -104,11 +104,11 @@ namespace PizzaCoreAPI.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    Nombre = table.Column<string>(type: "varchar(200)", maxLength: 200, nullable: false)
+                    Nombre = table.Column<string>(type: "longtext", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
-                    Descripcion = table.Column<string>(type: "varchar(1000)", maxLength: 1000, nullable: false)
+                    Descripcion = table.Column<string>(type: "longtext", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
-                    PrecioTotal = table.Column<decimal>(type: "decimal(10,2)", nullable: false),
+                    PrecioTotal = table.Column<decimal>(type: "decimal(65,30)", nullable: false),
                     Activo = table.Column<bool>(type: "tinyint(1)", nullable: false)
                 },
                 constraints: table =>
@@ -122,9 +122,9 @@ namespace PizzaCoreAPI.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    Nombre = table.Column<string>(type: "varchar(100)", maxLength: 100, nullable: false)
+                    Nombre = table.Column<string>(type: "longtext", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
-                    Descripcion = table.Column<string>(type: "varchar(300)", maxLength: 300, nullable: true)
+                    Descripcion = table.Column<string>(type: "longtext", nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4")
                 },
                 constraints: table =>
@@ -160,16 +160,48 @@ namespace PizzaCoreAPI.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    Nombre = table.Column<string>(type: "varchar(200)", maxLength: 200, nullable: false)
+                    Nombre = table.Column<string>(type: "longtext", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
-                    Descripcion = table.Column<string>(type: "varchar(1000)", maxLength: 1000, nullable: false)
+                    Descripcion = table.Column<string>(type: "longtext", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
-                    Precio = table.Column<decimal>(type: "decimal(10,2)", nullable: false),
+                    Precio = table.Column<decimal>(type: "decimal(65,30)", nullable: false),
                     Disponible = table.Column<bool>(type: "tinyint(1)", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Pizzas", x => x.Id);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
+                name: "Productos",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    Nombre = table.Column<string>(type: "varchar(200)", maxLength: 200, nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Descripcion = table.Column<string>(type: "varchar(1000)", maxLength: 1000, nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Precio = table.Column<decimal>(type: "decimal(10,2)", nullable: false),
+                    Tipo = table.Column<string>(type: "varchar(50)", maxLength: 50, nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Disponible = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    Stock = table.Column<int>(type: "int", nullable: false),
+                    FechaCreacion = table.Column<DateTime>(type: "datetime(6)", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP(6)"),
+                    FechaActualizacion = table.Column<DateTime>(type: "datetime(6)", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP(6)")
+                        .Annotation("MySql:ValueGenerationStrategy", MySqlValueGenerationStrategy.ComputedColumn),
+                    ApiId = table.Column<string>(type: "varchar(36)", maxLength: 36, nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    SincronizadoConAPI = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    Imagen = table.Column<string>(type: "varchar(255)", maxLength: 255, nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    IngredientesTexto = table.Column<string>(type: "text", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    TiempoPreparacion = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Productos", x => x.Id);
                 })
                 .Annotation("MySql:CharSet", "utf8mb4");
 
@@ -312,7 +344,7 @@ namespace PizzaCoreAPI.Migrations
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     FechaPedido = table.Column<DateTime>(type: "datetime(6)", nullable: false),
                     FechaEntrega = table.Column<DateTime>(type: "datetime(6)", nullable: true),
-                    Estado = table.Column<string>(type: "varchar(255)", nullable: true)
+                    Estado = table.Column<string>(type: "varchar(50)", maxLength: 50, nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     Total = table.Column<decimal>(type: "decimal(10,2)", nullable: false),
                     MetodoPago = table.Column<string>(type: "longtext", nullable: true)
@@ -343,10 +375,10 @@ namespace PizzaCoreAPI.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    Nombre = table.Column<string>(type: "varchar(150)", maxLength: 150, nullable: false)
+                    Nombre = table.Column<string>(type: "longtext", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
-                    PrecioAdicional = table.Column<decimal>(type: "decimal(10,2)", nullable: false),
-                    Descripcion = table.Column<string>(type: "varchar(500)", maxLength: 500, nullable: false)
+                    PrecioAdicional = table.Column<decimal>(type: "decimal(8,2)", nullable: false),
+                    Descripcion = table.Column<string>(type: "longtext", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     Tipo = table.Column<string>(type: "varchar(50)", maxLength: 50, nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
@@ -364,7 +396,7 @@ namespace PizzaCoreAPI.Migrations
                 .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
-                name: "MenuPizzas",
+                name: "MenuPizza",
                 columns: table => new
                 {
                     MenusId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
@@ -372,17 +404,42 @@ namespace PizzaCoreAPI.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_MenuPizzas", x => new { x.MenusId, x.PizzasId });
+                    table.PrimaryKey("PK_MenuPizza", x => new { x.MenusId, x.PizzasId });
                     table.ForeignKey(
-                        name: "FK_MenuPizzas_Menus_MenusId",
+                        name: "FK_MenuPizza_Menus_MenusId",
                         column: x => x.MenusId,
                         principalTable: "Menus",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_MenuPizzas_Pizzas_PizzasId",
+                        name: "FK_MenuPizza_Pizzas_PizzasId",
                         column: x => x.PizzasId,
                         principalTable: "Pizzas",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
+                name: "MenuProducto",
+                columns: table => new
+                {
+                    MenusId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    ProductosId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_MenuProducto", x => new { x.MenusId, x.ProductosId });
+                    table.ForeignKey(
+                        name: "FK_MenuProducto_Menus_MenusId",
+                        column: x => x.MenusId,
+                        principalTable: "Menus",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_MenuProducto_Productos_ProductosId",
+                        column: x => x.ProductosId,
+                        principalTable: "Productos",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 })
@@ -399,10 +456,10 @@ namespace PizzaCoreAPI.Migrations
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     RNC = table.Column<string>(type: "longtext", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
-                    Subtotal = table.Column<decimal>(type: "decimal(10,2)", nullable: false),
+                    Subtotal = table.Column<decimal>(type: "decimal(65,30)", nullable: false),
                     IVA = table.Column<decimal>(type: "decimal(10,2)", nullable: false),
                     Total = table.Column<decimal>(type: "decimal(10,2)", nullable: false),
-                    Estado = table.Column<string>(type: "varchar(255)", nullable: false)
+                    Estado = table.Column<string>(type: "varchar(50)", maxLength: 50, nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     NombreCliente = table.Column<string>(type: "longtext", nullable: false)
                         .Annotation("MySql:CharSet", "utf8mb4"),
@@ -427,58 +484,6 @@ namespace PizzaCoreAPI.Migrations
                 .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
-                name: "Productos",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    Nombre = table.Column<string>(type: "varchar(200)", maxLength: 200, nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    Descripcion = table.Column<string>(type: "varchar(1000)", maxLength: 1000, nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    Precio = table.Column<decimal>(type: "decimal(10,2)", nullable: false),
-                    Tipo = table.Column<string>(type: "varchar(50)", maxLength: 50, nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    Disponible = table.Column<bool>(type: "tinyint(1)", nullable: false),
-                    PedidoId = table.Column<string>(type: "varchar(36)", nullable: true)
-                        .Annotation("MySql:CharSet", "utf8mb4")
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Productos", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_Productos_Pedidos_PedidoId",
-                        column: x => x.PedidoId,
-                        principalTable: "Pedidos",
-                        principalColumn: "Id");
-                })
-                .Annotation("MySql:CharSet", "utf8mb4");
-
-            migrationBuilder.CreateTable(
-                name: "MenuProductos",
-                columns: table => new
-                {
-                    MenusId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    ProductosId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci")
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_MenuProductos", x => new { x.MenusId, x.ProductosId });
-                    table.ForeignKey(
-                        name: "FK_MenuProductos_Menus_MenusId",
-                        column: x => x.MenusId,
-                        principalTable: "Menus",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_MenuProductos_Productos_ProductosId",
-                        column: x => x.ProductosId,
-                        principalTable: "Productos",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                })
-                .Annotation("MySql:CharSet", "utf8mb4");
-
-            migrationBuilder.CreateTable(
                 name: "PedidoDetalles",
                 columns: table => new
                 {
@@ -489,29 +494,17 @@ namespace PizzaCoreAPI.Migrations
                     ProductoId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                     Cantidad = table.Column<int>(type: "int", nullable: false),
                     PrecioUnitario = table.Column<decimal>(type: "decimal(10,2)", nullable: false),
-                    Subtotal = table.Column<decimal>(type: "decimal(10,2)", nullable: false),
-                    FacturaId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
-                    PizzaId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci")
+                    Subtotal = table.Column<decimal>(type: "decimal(10,2)", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_PedidoDetalles", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_PedidoDetalles_Facturas_FacturaId",
-                        column: x => x.FacturaId,
-                        principalTable: "Facturas",
-                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_PedidoDetalles_Pedidos_PedidoId",
                         column: x => x.PedidoId,
                         principalTable: "Pedidos",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_PedidoDetalles_Pizzas_PizzaId",
-                        column: x => x.PizzaId,
-                        principalTable: "Pizzas",
-                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_PedidoDetalles_Productos_ProductoId",
                         column: x => x.ProductoId,
@@ -522,7 +515,7 @@ namespace PizzaCoreAPI.Migrations
                 .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
-                name: "ProductoIngredientes",
+                name: "IngredienteProducto",
                 columns: table => new
                 {
                     IngredientesId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
@@ -530,17 +523,98 @@ namespace PizzaCoreAPI.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_ProductoIngredientes", x => new { x.IngredientesId, x.ProductosId });
+                    table.PrimaryKey("PK_IngredienteProducto", x => new { x.IngredientesId, x.ProductosId });
                     table.ForeignKey(
-                        name: "FK_ProductoIngredientes_Ingredientes_IngredientesId",
+                        name: "FK_IngredienteProducto_Ingredientes_IngredientesId",
                         column: x => x.IngredientesId,
                         principalTable: "Ingredientes",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_ProductoIngredientes_Productos_ProductosId",
+                        name: "FK_IngredienteProducto_Productos_ProductosId",
                         column: x => x.ProductosId,
                         principalTable: "Productos",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
+                name: "Ventas",
+                columns: table => new
+                {
+                    Id = table.Column<string>(type: "varchar(255)", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    NumeroOrden = table.Column<string>(type: "longtext", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    ClienteId = table.Column<string>(type: "varchar(255)", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    EmpleadoId = table.Column<string>(type: "varchar(255)", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    FechaVenta = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                    Total = table.Column<decimal>(type: "decimal(65,30)", nullable: false),
+                    MetodoPago = table.Column<int>(type: "int", nullable: false),
+                    TerminalId = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Estado = table.Column<int>(type: "int", nullable: false),
+                    PedidoId = table.Column<string>(type: "varchar(36)", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    FacturaId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
+                    FechaCreacion = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                    FechaActualizacion = table.Column<DateTime>(type: "datetime(6)", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Ventas", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Ventas_AspNetUsers_ClienteId",
+                        column: x => x.ClienteId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_Ventas_AspNetUsers_EmpleadoId",
+                        column: x => x.EmpleadoId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_Ventas_Facturas_FacturaId",
+                        column: x => x.FacturaId,
+                        principalTable: "Facturas",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_Ventas_Pedidos_PedidoId",
+                        column: x => x.PedidoId,
+                        principalTable: "Pedidos",
+                        principalColumn: "Id");
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
+                name: "VentaDetalles",
+                columns: table => new
+                {
+                    Id = table.Column<string>(type: "varchar(255)", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    VentaId = table.Column<string>(type: "varchar(255)", nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    ProductoId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    Cantidad = table.Column<int>(type: "int", nullable: false),
+                    PrecioUnitario = table.Column<decimal>(type: "decimal(65,30)", nullable: false),
+                    Subtotal = table.Column<decimal>(type: "decimal(65,30)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_VentaDetalles", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_VentaDetalles_Productos_ProductoId",
+                        column: x => x.ProductoId,
+                        principalTable: "Productos",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_VentaDetalles_Ventas_VentaId",
+                        column: x => x.VentaId,
+                        principalTable: "Ventas",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 })
@@ -584,19 +658,14 @@ namespace PizzaCoreAPI.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_Factura_Estado",
-                table: "Facturas",
-                column: "Estado");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Factura_FechaEmision",
-                table: "Facturas",
-                column: "FechaEmision");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_Facturas_PedidoId",
                 table: "Facturas",
                 column: "PedidoId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_IngredienteProducto_ProductosId",
+                table: "IngredienteProducto",
+                column: "ProductosId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Ingredientes_PizzaId",
@@ -604,24 +673,14 @@ namespace PizzaCoreAPI.Migrations
                 column: "PizzaId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_MenuPizzas_PizzasId",
-                table: "MenuPizzas",
+                name: "IX_MenuPizza_PizzasId",
+                table: "MenuPizza",
                 column: "PizzasId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_MenuProductos_ProductosId",
-                table: "MenuProductos",
+                name: "IX_MenuProducto_ProductosId",
+                table: "MenuProducto",
                 column: "ProductosId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Menu_Activo",
-                table: "Menus",
-                column: "Activo");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_PedidoDetalles_FacturaId",
-                table: "PedidoDetalles",
-                column: "FacturaId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_PedidoDetalles_PedidoId",
@@ -629,29 +688,14 @@ namespace PizzaCoreAPI.Migrations
                 column: "PedidoId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_PedidoDetalles_PizzaId",
-                table: "PedidoDetalles",
-                column: "PizzaId");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_PedidoDetalles_ProductoId",
                 table: "PedidoDetalles",
                 column: "ProductoId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Pedido_ClienteId",
+                name: "IX_Pedidos_ClienteId",
                 table: "Pedidos",
                 column: "ClienteId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Pedido_Estado",
-                table: "Pedidos",
-                column: "Estado");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Pedido_FechaPedido",
-                table: "Pedidos",
-                column: "FechaPedido");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Pedidos_EmpleadoId",
@@ -659,23 +703,33 @@ namespace PizzaCoreAPI.Migrations
                 column: "EmpleadoId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ProductoIngredientes_ProductosId",
-                table: "ProductoIngredientes",
-                column: "ProductosId");
+                name: "IX_VentaDetalles_ProductoId",
+                table: "VentaDetalles",
+                column: "ProductoId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Producto_Disponible",
-                table: "Productos",
-                column: "Disponible");
+                name: "IX_VentaDetalles_VentaId",
+                table: "VentaDetalles",
+                column: "VentaId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Producto_Tipo",
-                table: "Productos",
-                column: "Tipo");
+                name: "IX_Ventas_ClienteId",
+                table: "Ventas",
+                column: "ClienteId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Productos_PedidoId",
-                table: "Productos",
+                name: "IX_Ventas_EmpleadoId",
+                table: "Ventas",
+                column: "EmpleadoId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Ventas_FacturaId",
+                table: "Ventas",
+                column: "FacturaId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Ventas_PedidoId",
+                table: "Ventas",
                 column: "PedidoId");
         }
 
@@ -701,10 +755,13 @@ namespace PizzaCoreAPI.Migrations
                 name: "CuentasPorCobrar");
 
             migrationBuilder.DropTable(
-                name: "MenuPizzas");
+                name: "IngredienteProducto");
 
             migrationBuilder.DropTable(
-                name: "MenuProductos");
+                name: "MenuPizza");
+
+            migrationBuilder.DropTable(
+                name: "MenuProducto");
 
             migrationBuilder.DropTable(
                 name: "MetodosDePago");
@@ -716,25 +773,28 @@ namespace PizzaCoreAPI.Migrations
                 name: "PedidoDetalles");
 
             migrationBuilder.DropTable(
-                name: "ProductoIngredientes");
+                name: "VentaDetalles");
 
             migrationBuilder.DropTable(
                 name: "AspNetRoles");
 
             migrationBuilder.DropTable(
-                name: "Menus");
-
-            migrationBuilder.DropTable(
-                name: "Facturas");
-
-            migrationBuilder.DropTable(
                 name: "Ingredientes");
+
+            migrationBuilder.DropTable(
+                name: "Menus");
 
             migrationBuilder.DropTable(
                 name: "Productos");
 
             migrationBuilder.DropTable(
+                name: "Ventas");
+
+            migrationBuilder.DropTable(
                 name: "Pizzas");
+
+            migrationBuilder.DropTable(
+                name: "Facturas");
 
             migrationBuilder.DropTable(
                 name: "Pedidos");

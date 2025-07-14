@@ -12,6 +12,11 @@ namespace PizzaCoreAPI.Data
         {
         }
 
+        // Parameterless constructor for EF Tools
+        public PizzaDbContext() : base()
+        {
+        }
+
         public DbSet<Producto> Productos { get; set; }
         public DbSet<Ingrediente> Ingredientes { get; set; }
         public DbSet<Menu> Menus { get; set; }
@@ -30,11 +35,11 @@ namespace PizzaCoreAPI.Data
         {
             base.OnModelCreating(modelBuilder);
 
-            // Configure Venta entities first - this handles all Venta configurations
-            ConfigureVentaEntities(modelBuilder);
+            // Configure basic relationships first
+            ConfigureBasicRelationships(modelBuilder);
 
-            // Configure Identity tables to use varchar(36) for consistency
-            ConfigureIdentityTables(modelBuilder);
+            // Skip Venta configuration for now - let EF Core use conventions
+            // ConfigureVentaEntitiesSimple(modelBuilder);
 
             // Configure GUID properties for MySQL (use CHAR(36) for better performance)
             ConfigureGuidProperties(modelBuilder);
@@ -47,73 +52,12 @@ namespace PizzaCoreAPI.Data
 
             // Configure enum conversions for MySQL
             ConfigureEnumConversions(modelBuilder);
-
-            // Producto–Ingrediente (Many-to-Many)
-            modelBuilder.Entity<Producto>()
-                .HasMany(p => p.Ingredientes)
-                .WithMany(i => i.Productos)
-                .UsingEntity(j => j.ToTable("ProductoIngredientes"));
-
-            // Menu–Producto (Many-to-Many)
-            modelBuilder.Entity<Menu>()
-                .HasMany(m => m.Productos)
-                .WithMany(p => p.Menus)
-                .UsingEntity(j => j.ToTable("MenuProductos"));
-
-            // Menu–Pizza (Many-to-Many)
-            modelBuilder.Entity<Menu>()
-                .HasMany(m => m.Pizzas)
-                .WithMany(p => p.Menus)
-                .UsingEntity(j => j.ToTable("MenuPizzas"));
-
-            // PedidoDetalle relationships
-            modelBuilder.Entity<PedidoDetalle>()
-                .HasOne(d => d.Producto)
-                .WithMany(p => p.PedidoDetalles)
-                .HasForeignKey(d => d.ProductoId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            modelBuilder.Entity<PedidoDetalle>()
-                .HasOne(pd => pd.Pedido)
-                .WithMany(p => p.Detalles)
-                .HasForeignKey(pd => pd.PedidoId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            // Pedido–Usuario relationships
-            modelBuilder.Entity<Pedido>()
-                .HasOne(p => p.Cliente)
-                .WithMany(c => c.Pedidos)
-                .HasForeignKey(p => p.ClienteId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            modelBuilder.Entity<Pedido>()
-                .HasOne(p => p.Empleado)
-                .WithMany(u => u.PedidosEmpleado)
-                .HasForeignKey(p => p.EmpleadoId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            // Factura relationship
-            modelBuilder.Entity<Factura>()
-                .HasOne(f => f.Pedido)
-                .WithMany()
-                .HasForeignKey(f => f.PedidoId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            // NOTE: Venta relationships are now configured in ConfigureVentaEntities method
-
-            // Add indexes for frequently queried fields
-            ConfigureIndexes(modelBuilder);
-
-            // Configure table engines and charset
-            ConfigureTableOptions(modelBuilder);
         }
 
         private void ConfigureIdentityTables(ModelBuilder modelBuilder)
         {
             // Keep Identity tables as varchar(255) - this is the standard
             // Our business entities will use varchar(36) but foreign keys to Identity will use varchar(255)
-
-            // No changes needed here - let Identity use its default configuration
         }
 
         private void ConfigureVentaEntities(ModelBuilder modelBuilder)
@@ -122,7 +66,7 @@ namespace PizzaCoreAPI.Data
             modelBuilder.Entity<Venta>(entity =>
             {
                 entity.HasKey(v => v.Id);
-                
+
                 entity.Property(v => v.Id)
                     .HasMaxLength(36)
                     .HasColumnType("char(36)")
@@ -162,7 +106,7 @@ namespace PizzaCoreAPI.Data
                 entity.Property(v => v.Total)
                     .HasColumnType("decimal(10,2)");
 
-                // Configure relationships
+                // Configure relationships - temporarily disable WithMany to test
                 entity.HasOne(v => v.Cliente)
                     .WithMany()
                     .HasForeignKey(v => v.ClienteId)
@@ -193,11 +137,11 @@ namespace PizzaCoreAPI.Data
                 entity.HasIndex(v => v.FacturaId).HasDatabaseName("IX_Ventas_FacturaId");
             });
 
-            // Configure VentaDetalle entity with string ID
+            // Configure VentaDetalle entity - simplified approach
             modelBuilder.Entity<VentaDetalle>(entity =>
             {
                 entity.HasKey(vd => vd.Id);
-                
+
                 entity.Property(vd => vd.Id)
                     .HasMaxLength(36)
                     .HasColumnType("char(36)")
@@ -208,7 +152,9 @@ namespace PizzaCoreAPI.Data
                     .HasColumnType("char(36)")
                     .IsRequired();
 
+                // Configure ProductoId as Guid (matches Producto.Id)
                 entity.Property(vd => vd.ProductoId)
+                    .HasColumnType("char(36)")
                     .IsRequired();
 
                 entity.Property(vd => vd.PrecioUnitario)
@@ -217,9 +163,9 @@ namespace PizzaCoreAPI.Data
                 entity.Property(vd => vd.Subtotal)
                     .HasColumnType("decimal(10,2)");
 
-                // Configure relationships
+                // Configure relationships - temporarily disable WithMany to test
                 entity.HasOne(vd => vd.Venta)
-                    .WithMany(v => v.Detalles)
+                    .WithMany()
                     .HasForeignKey(vd => vd.VentaId)
                     .OnDelete(DeleteBehavior.Cascade);
 
@@ -232,6 +178,100 @@ namespace PizzaCoreAPI.Data
                 entity.HasIndex(vd => vd.VentaId).HasDatabaseName("IX_VentaDetalles_VentaId");
                 entity.HasIndex(vd => vd.ProductoId).HasDatabaseName("IX_VentaDetalles_ProductoId");
             });
+        }
+
+        private void ConfigureVentaEntitiesSimple(ModelBuilder modelBuilder)
+        {
+            // Configure Venta - only basic configuration
+            modelBuilder.Entity<Venta>()
+                .HasKey(v => v.Id);
+
+            modelBuilder.Entity<Venta>()
+                .Property(v => v.Id)
+                .HasColumnType("char(36)");
+
+            // Disable VentaDetalle configuration
+            // modelBuilder.Entity<VentaDetalle>()
+            //     .HasKey(vd => vd.Id);
+
+            // modelBuilder.Entity<VentaDetalle>()
+            //     .Property(vd => vd.Id)
+            //     .HasColumnType("char(36)");
+
+            // modelBuilder.Entity<VentaDetalle>()
+            //     .Property(vd => vd.VentaId)
+            //     .HasColumnType("char(36)");
+
+            // modelBuilder.Entity<VentaDetalle>()
+            //     .Property(vd => vd.ProductoId)
+            //     .HasColumnType("char(36)");
+
+            // Configure basic relationship
+            // modelBuilder.Entity<VentaDetalle>()
+            //     .HasOne(vd => vd.Venta)
+            //     .WithMany(v => v.Detalles)
+            //     .HasForeignKey(vd => vd.VentaId)
+            //     .OnDelete(DeleteBehavior.Cascade);
+        }
+
+        private void ConfigureBasicRelationships(ModelBuilder modelBuilder)
+        {
+            // PedidoDetalle relationships
+            modelBuilder.Entity<PedidoDetalle>()
+                .HasOne(d => d.Producto)
+                .WithMany(p => p.PedidoDetalles)
+                .HasForeignKey(d => d.ProductoId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<PedidoDetalle>()
+                .HasOne(pd => pd.Pedido)
+                .WithMany(p => p.Detalles)
+                .HasForeignKey(pd => pd.PedidoId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Pedido–Usuario relationships - CRITICAL: explicitly configure both relationships
+            modelBuilder.Entity<Pedido>()
+                .HasOne(p => p.Cliente)
+                .WithMany(u => u.Pedidos)
+                .HasForeignKey(p => p.ClienteId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Pedido>()
+                .HasOne(p => p.Empleado)
+                .WithMany(u => u.PedidosEmpleado)
+                .HasForeignKey(p => p.EmpleadoId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Factura relationship
+            modelBuilder.Entity<Factura>()
+                .HasOne(f => f.Pedido)
+                .WithMany()
+                .HasForeignKey(f => f.PedidoId)
+                .OnDelete(DeleteBehavior.Cascade);
+        }
+
+        private void ConfigureVentaEntitiesMinimal(ModelBuilder modelBuilder)
+        {
+            // Basic configuration without complex relationships
+            modelBuilder.Entity<Venta>().ToTable("Ventas");
+            modelBuilder.Entity<VentaDetalle>().ToTable("VentaDetalles");
+
+            // Configure primary keys
+            modelBuilder.Entity<Venta>().HasKey(v => v.Id);
+            modelBuilder.Entity<VentaDetalle>().HasKey(vd => vd.Id);
+
+            // Configure basic properties
+            modelBuilder.Entity<Venta>()
+                .Property(v => v.Id)
+                .HasColumnType("char(36)");
+
+            modelBuilder.Entity<VentaDetalle>()
+                .Property(vd => vd.Id)
+                .HasColumnType("char(36)");
+
+            modelBuilder.Entity<VentaDetalle>()
+                .Property(vd => vd.ProductoId)
+                .HasColumnType("char(36)");
         }
 
         private void ConfigureGuidProperties(ModelBuilder modelBuilder)
@@ -261,7 +301,7 @@ namespace PizzaCoreAPI.Data
                 .Property(m => m.Id)
                 .HasColumnType("char(36)");
 
-            // Foreign key GUID references
+            // Foreign key GUID references - EXCLUDE VentaDetalle.ProductoId
             modelBuilder.Entity<PedidoDetalle>()
                 .Property(pd => pd.ProductoId)
                 .HasColumnType("char(36)");
@@ -335,8 +375,6 @@ namespace PizzaCoreAPI.Data
                 .HasMaxLength(255)
                 .HasColumnType("varchar(255)");
 
-            // NOTE: Venta configurations are now handled in ConfigureVentaEntities method
-
             // String properties with reasonable lengths
             modelBuilder.Entity<Producto>()
                 .Property(p => p.Nombre)
@@ -346,14 +384,15 @@ namespace PizzaCoreAPI.Data
                 .Property(p => p.Descripcion)
                 .HasMaxLength(1000);
 
-            // New product fields configuration
+            // New product fields configuration - fix MySQL default value syntax
             modelBuilder.Entity<Producto>()
                 .Property(p => p.FechaCreacion)
-                .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                .HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
 
             modelBuilder.Entity<Producto>()
                 .Property(p => p.FechaActualizacion)
-                .HasDefaultValueSql("CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
+                .HasDefaultValueSql("CURRENT_TIMESTAMP(6)")
+                .ValueGeneratedOnAddOrUpdate();
 
             modelBuilder.Entity<Producto>()
                 .Property(p => p.ApiId)
@@ -367,88 +406,18 @@ namespace PizzaCoreAPI.Data
             modelBuilder.Entity<Producto>()
                 .Property(p => p.IngredientesTexto)
                 .HasColumnType("text");
-
-            modelBuilder.Entity<Producto>()
-                .Property(p => p.TiempoPreparacion)
-                .HasDefaultValue(15);
-
-            // Add indexes for better performance
-            modelBuilder.Entity<Producto>()
-                .HasIndex(p => p.Nombre)
-                .HasDatabaseName("idx_producto_nombre");
-
-            modelBuilder.Entity<Producto>()
-                .HasIndex(p => p.Tipo)
-                .HasDatabaseName("idx_producto_tipo");
-
-            modelBuilder.Entity<Producto>()
-                .HasIndex(p => p.Disponible)
-                .HasDatabaseName("idx_producto_disponible");
-
-            modelBuilder.Entity<Producto>()
-                .HasIndex(p => p.ApiId)
-                .HasDatabaseName("idx_producto_api");
-
-            modelBuilder.Entity<Menu>()
-                .Property(m => m.Nombre)
-                .HasMaxLength(200);
-
-            modelBuilder.Entity<Menu>()
-                .Property(m => m.Descripcion)
-                .HasMaxLength(1000);
-
-            modelBuilder.Entity<Pizza>()
-                .Property(p => p.Nombre)
-                .HasMaxLength(200);
-
-            modelBuilder.Entity<Pizza>()
-                .Property(p => p.Descripcion)
-                .HasMaxLength(1000);
-
-            modelBuilder.Entity<Ingrediente>()
-                .Property(i => i.Nombre)
-                .HasMaxLength(150);
-
-            modelBuilder.Entity<Ingrediente>()
-                .Property(i => i.Descripcion)
-                .HasMaxLength(500);
-
-            modelBuilder.Entity<MetodoDePago>()
-                .Property(m => m.Nombre)
-                .HasMaxLength(100);
-
-            modelBuilder.Entity<MetodoDePago>()
-                .Property(m => m.Descripcion)
-                .HasMaxLength(300);
-
-            // Usuario properties
-            modelBuilder.Entity<Usuario>()
-                .Property(u => u.NombreCompleto)
-                .HasMaxLength(200);
-
-            modelBuilder.Entity<Usuario>()
-                .Property(u => u.Direccion)
-                .HasMaxLength(500);
-
-            modelBuilder.Entity<Usuario>()
-                .Property(u => u.RNC)
-                .HasMaxLength(20);
-
-            modelBuilder.Entity<Usuario>()
-                .Property(u => u.Cargo)
-                .HasMaxLength(100);
         }
 
         private void ConfigureDecimalPrecision(ModelBuilder modelBuilder)
         {
-            // MySQL decimal precision (10,2) - good for currency
+            // Configure decimal properties for MySQL
             modelBuilder.Entity<Producto>()
                 .Property(p => p.Precio)
                 .HasColumnType("decimal(10,2)");
 
             modelBuilder.Entity<Ingrediente>()
                 .Property(i => i.PrecioAdicional)
-                .HasColumnType("decimal(10,2)");
+                .HasColumnType("decimal(8,2)");
 
             modelBuilder.Entity<Pedido>()
                 .Property(p => p.Total)
@@ -463,23 +432,11 @@ namespace PizzaCoreAPI.Data
                 .HasColumnType("decimal(10,2)");
 
             modelBuilder.Entity<Factura>()
-                .Property(f => f.Subtotal)
+                .Property(f => f.Total)
                 .HasColumnType("decimal(10,2)");
 
             modelBuilder.Entity<Factura>()
                 .Property(f => f.IVA)
-                .HasColumnType("decimal(10,2)");
-
-            modelBuilder.Entity<Factura>()
-                .Property(f => f.Total)
-                .HasColumnType("decimal(10,2)");
-
-            modelBuilder.Entity<Menu>()
-                .Property(m => m.PrecioTotal)
-                .HasColumnType("decimal(10,2)");
-
-            modelBuilder.Entity<Pizza>()
-                .Property(p => p.Precio)
                 .HasColumnType("decimal(10,2)");
 
             modelBuilder.Entity<Pago>()
@@ -489,13 +446,11 @@ namespace PizzaCoreAPI.Data
             modelBuilder.Entity<CuentasPorCobrar>()
                 .Property(c => c.MontoPendiente)
                 .HasColumnType("decimal(10,2)");
-
-            // NOTE: Venta decimal configurations are now handled in ConfigureVentaEntities method
         }
 
         private void ConfigureEnumConversions(ModelBuilder modelBuilder)
         {
-            // Convert enums to strings for MySQL compatibility
+            // Configure enum to string conversions
             modelBuilder.Entity<Producto>()
                 .Property(p => p.Tipo)
                 .HasConversion<string>()
@@ -506,7 +461,20 @@ namespace PizzaCoreAPI.Data
                 .HasConversion<string>()
                 .HasMaxLength(50);
 
-            // NOTE: Venta enum configurations are now handled in ConfigureVentaEntities method
+            modelBuilder.Entity<Pedido>()
+                .Property(p => p.Estado)
+                .HasConversion<string>()
+                .HasMaxLength(50);
+
+            modelBuilder.Entity<Factura>()
+                .Property(f => f.Estado)
+                .HasConversion<string>()
+                .HasMaxLength(50);
+
+            modelBuilder.Entity<CuentasPorCobrar>()
+                .Property(c => c.Estado)
+                .HasConversion<string>()
+                .HasMaxLength(50);
         }
 
         private void ConfigureIndexes(ModelBuilder modelBuilder)
@@ -543,14 +511,11 @@ namespace PizzaCoreAPI.Data
             modelBuilder.Entity<Factura>()
                 .HasIndex(f => f.Estado)
                 .HasDatabaseName("IX_Factura_Estado");
-
-            // NOTE: Venta indexes are now configured in ConfigureVentaEntities method
         }
 
         private void ConfigureTableOptions(ModelBuilder modelBuilder)
         {
             // Remove custom charset and collation configurations to let Identity use defaults
-            // This avoids collation conflicts between Identity tables and business tables
         }
 
         // Override for MySQL date/time handling
