@@ -242,17 +242,38 @@ namespace PizzaCoreAPI.Data
                 .HasForeignKey(p => p.EmpleadoId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // Factura relationship
-            modelBuilder.Entity<Factura>()
-                .HasOne(f => f.Pedido)
-                .WithMany()
-                .HasForeignKey(f => f.PedidoId)
-                .OnDelete(DeleteBehavior.Cascade);
-                
+            // Factura configuration - completely isolated from navigation properties
+            modelBuilder.Entity<Factura>(entity =>
+            {
+                entity.HasKey(f => f.Id);
+                entity.Property(f => f.Id).HasColumnName("idfactura");
+                entity.Property(f => f.FechaFactura).HasColumnName("fechaFactura");
+                entity.Property(f => f.FkCliente).HasColumnName("fkcliente");
+                entity.Property(f => f.TipoEntrega).HasColumnName("tipo_entrega");
+                entity.Property(f => f.Subtotal).HasColumnName("subtotal");
+                entity.Property(f => f.IVA).HasColumnName("iva");
+                entity.Property(f => f.Total).HasColumnName("total");
+                entity.Property(f => f.Estado).HasColumnName("estado");
+                entity.Property(f => f.EmpleadoId).HasColumnName("empleadoId");
+                entity.Property(f => f.FechaCreacion).HasColumnName("fechaCreacion");
+                entity.Property(f => f.Notas).HasColumnName("notas");
+                entity.Property(f => f.SyncCompletado).HasColumnName("sync_completado");
+                entity.Property(f => f.SyncIntentos).HasColumnName("sync_intentos");
+                entity.Property(f => f.SyncUltimoIntento).HasColumnName("sync_ultimo_intento");
+                entity.Property(f => f.SyncError).HasColumnName("sync_error");
+                entity.ToTable("factura");
+
+                // Completely disable any navigation properties or relationships
+                entity.Ignore("Cliente");
+                entity.Ignore("Empleado");
+                entity.Ignore("ClienteIdCliente");
+                entity.Ignore("EmpleadoIdEmpleado");
+            });
+
             // Temporarily ignore navigation properties to fix model configuration issues
             modelBuilder.Entity<Ingrediente>()
                 .Ignore(i => i.Productos);
-                
+
             modelBuilder.Entity<Producto>()
                 .Ignore(p => p.Ingredientes);
         }
@@ -262,6 +283,7 @@ namespace PizzaCoreAPI.Data
             // Basic configuration without complex relationships
             modelBuilder.Entity<Venta>().ToTable("Ventas");
             modelBuilder.Entity<VentaDetalle>().ToTable("VentaDetalles");
+            // Factura table configuration is now handled above
 
             // Configure primary keys
             modelBuilder.Entity<Venta>().HasKey(v => v.Id);
@@ -298,10 +320,6 @@ namespace PizzaCoreAPI.Data
 
             modelBuilder.Entity<Pizza>()
                 .Property(p => p.Id)
-                .HasColumnType("char(36)");
-
-            modelBuilder.Entity<Factura>()
-                .Property(f => f.Id)
                 .HasColumnType("char(36)");
 
             modelBuilder.Entity<MetodoDePago>()
@@ -512,8 +530,8 @@ namespace PizzaCoreAPI.Data
                 .HasDatabaseName("IX_Menu_Activo");
 
             modelBuilder.Entity<Factura>()
-                .HasIndex(f => f.FechaEmision)
-                .HasDatabaseName("IX_Factura_FechaEmision");
+                .HasIndex(f => f.FechaFactura)
+                .HasDatabaseName("IX_Factura_FechaFactura");
 
             modelBuilder.Entity<Factura>()
                 .HasIndex(f => f.Estado)

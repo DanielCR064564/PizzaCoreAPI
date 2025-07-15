@@ -1,77 +1,73 @@
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 
 namespace PizzaCoreAPI.Models
 {
+    [Table("ventas")]
     public class Venta
     {
         [Key]
+        [Column("id")]
         public string Id { get; set; } = Guid.NewGuid().ToString();
 
         [Required]
+        [Column("numero_orden")]
+        [StringLength(50)]
         public string NumeroOrden { get; set; } = string.Empty;
 
+        [Column("cliente_id")]
+        [StringLength(36)]
         public string? ClienteId { get; set; }
-        public Usuario? Cliente { get; set; }
 
+        [Column("empleado_id")]
+        [StringLength(36)]
         public string? EmpleadoId { get; set; }
-        public Usuario? Empleado { get; set; }
 
-        [Required]
+        [Column("fecha_venta")]
         public DateTime FechaVenta { get; set; } = DateTime.Now;
 
-        [Required]
+        [Column("total", TypeName = "decimal(10,2)")]
         public decimal Total { get; set; }
 
-        [Required]
+        [Column("metodo_pago")]
         public MetodoPago MetodoPago { get; set; } = MetodoPago.Efectivo;
 
+        [Column("terminal_id")]
+        [StringLength(50)]
         public string? TerminalId { get; set; }
 
-        public EstadoVenta Estado { get; set; } = EstadoVenta.Completada;
+        [Column("estado")]
+        public EstadoVenta Estado { get; set; } = EstadoVenta.Pendiente;
 
-        // Reference to the created Pedido
+        [Column("pedido_id")]
+        [StringLength(36)]
         public string? PedidoId { get; set; }
-        public Pedido? Pedido { get; set; }
 
-        // Reference to the created Factura
-        public Guid? FacturaId { get; set; }
-        public Factura? Factura { get; set; }
+        [Column("factura_id")]
+        [StringLength(36)]
+        public string? FacturaId { get; set; }
 
-        public virtual ICollection<VentaDetalle> Detalles { get; set; } = new List<VentaDetalle>();
-
-        // Audit fields
+        [Column("fecha_creacion")]
         public DateTime FechaCreacion { get; set; } = DateTime.Now;
-        public DateTime? FechaActualizacion { get; set; }
-    }
 
-    public class VentaDetalle
-    {
-        [Key]
-        public string Id { get; set; } = Guid.NewGuid().ToString();
+        [Column("fecha_actualizacion")]
+        public DateTime FechaActualizacion { get; set; } = DateTime.Now;
 
-        [Required]
-        public string VentaId { get; set; } = string.Empty;
-        public Venta Venta { get; set; } = null!;
+        // Navigation properties
+        [JsonIgnore]
+        public virtual Cliente? Cliente { get; set; }
 
-        [Required]
-        public Guid ProductoId { get; set; }
-        public Producto Producto { get; set; } = null!;
+        [JsonIgnore]
+        public virtual Usuario? Empleado { get; set; }
 
-        [Required]
-        public int Cantidad { get; set; }
+        [JsonIgnore]
+        public virtual Pedido? Pedido { get; set; }
 
-        [Required]
-        public decimal PrecioUnitario { get; set; }
+        [JsonIgnore]
+        public virtual Factura? Factura { get; set; }
 
-        [Required]
-        public decimal Subtotal { get; set; }
-    }
-
-    public enum EstadoVenta
-    {
-        Pendiente,
-        Completada,
-        Cancelada,
-        Reembolsada
+        [JsonIgnore]
+        public virtual ICollection<VentaDetalle> Detalles { get; set; } = new List<VentaDetalle>();
     }
 }

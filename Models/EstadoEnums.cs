@@ -37,4 +37,13 @@ namespace PizzaCoreAPI.Models
         Tarjeta = 1,
         Transferencia = 2
     }
+
+    // Estado for Ventas
+    public enum EstadoVenta
+    {
+        Pendiente = 0,
+        Confirmada = 1,
+        Cancelada = 2,
+        Completada = 3
+    }
 }

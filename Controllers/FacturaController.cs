@@ -38,7 +38,7 @@ namespace PizzaCoreAPI.Controllers
         /// Gets a specific invoice by ID
         /// </summary>
         [HttpGet("{id}")]
-        public async Task<ActionResult<FacturaDTO>> GetFactura(Guid id)
+        public async Task<ActionResult<FacturaDTO>> GetFactura(int id)
         {
             try
             {
@@ -138,7 +138,7 @@ namespace PizzaCoreAPI.Controllers
         /// Updates invoice status
         /// </summary>
         [HttpPatch("{id}/estado")]
-        public async Task<IActionResult> UpdateEstadoFactura(Guid id, [FromBody] ActualizarEstadoFacturaDTO dto)
+        public async Task<IActionResult> UpdateEstadoFactura(int id, [FromBody] ActualizarEstadoFacturaDTO dto)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
@@ -171,7 +171,7 @@ namespace PizzaCoreAPI.Controllers
         /// Generates and downloads invoice PDF
         /// </summary>
         [HttpGet("{id}/pdf")]
-        public async Task<ActionResult> GetFacturaPDF(Guid id)
+        public async Task<ActionResult> GetFacturaPDF(int id)
         {
             try
             {
@@ -196,7 +196,7 @@ namespace PizzaCoreAPI.Controllers
         /// Preview invoice PDF in browser
         /// </summary>
         [HttpGet("{id}/pdf/preview")]
-        public async Task<ActionResult> PreviewFacturaPDF(Guid id)
+        public async Task<ActionResult> PreviewFacturaPDF(int id)
         {
             try
             {

@@ -4,20 +4,26 @@ namespace PizzaCoreAPI.DTOs
 {
     public class FacturaDTO
     {
-        public Guid Id { get; set; }
-        public string PedidoId { get; set; } = string.Empty;
-        public string NumeroFactura { get; set; } = string.Empty;
-        public string RNC { get; set; } = string.Empty;
+        public int Id { get; set; }
+        public DateTime FechaFactura { get; set; }
+        public int FkCliente { get; set; }
+        public string TipoEntrega { get; set; } = "Local";
         public decimal Subtotal { get; set; }
         public decimal IVA { get; set; }
         public decimal Total { get; set; }
         public string Estado { get; set; } = "Pendiente";
+        public int? EmpleadoId { get; set; }
+        public DateTime FechaCreacion { get; set; }
+        public string? Notas { get; set; }
+
+        // Computed properties for backward compatibility
+        public string NumeroFactura => $"F-{Id:D6}";
+        public DateTime FechaEmision => FechaFactura;
         public string NombreCliente { get; set; } = string.Empty;
         public string DireccionCliente { get; set; } = string.Empty;
         public string NombreEmpleado { get; set; } = string.Empty;
+        public string RNC { get; set; } = string.Empty;
         public string RNCEmpleado { get; set; } = string.Empty;
-        public DateTime FechaEmision { get; set; }
-        public List<PedidoDetalleDTO> Detalles { get; set; } = new();
 
         // Additional calculated fields
         public decimal TotalSinImpuestos => Subtotal;

@@ -16,7 +16,7 @@ namespace PizzaCoreAPI.Services
         /// </summary>
         /// <param name="id">Invoice ID</param>
         /// <returns>Invoice DTO or null if not found</returns>
-        Task<FacturaDTO?> GetFacturaByIdAsync(Guid id);
+        Task<FacturaDTO?> GetFacturaByIdAsync(int id);
 
         /// <summary>
         /// Gets an invoice associated with a specific order
@@ -40,7 +40,7 @@ namespace PizzaCoreAPI.Services
         /// <param name="estado">New invoice status</param>
         /// <returns>True if updated successfully, false if invoice not found</returns>
         /// <exception cref="InvalidOperationException">When state transition is not allowed</exception>
-        Task<bool> UpdateEstadoFacturaAsync(Guid id, EstadoFactura estado);
+        Task<bool> UpdateEstadoFacturaAsync(int id, EstadoFactura estado);
 
         /// <summary>
         /// Generates a PDF document for the specified invoice
@@ -48,7 +48,7 @@ namespace PizzaCoreAPI.Services
         /// <param name="facturaId">Invoice ID</param>
         /// <returns>PDF file as byte array</returns>
         /// <exception cref="InvalidOperationException">When invoice is not found</exception>
-        Task<byte[]> GenerarFacturaPDFAsync(Guid facturaId);
+        Task<byte[]> GenerarFacturaPDFAsync(int facturaId);
 
         /// <summary>
         /// Generates the next sequential invoice number
