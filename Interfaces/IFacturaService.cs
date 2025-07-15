@@ -92,6 +92,12 @@ namespace PizzaCoreAPI.Services
         /// <param name="fechaFin">End date for statistics</param>
         /// <returns>Invoice statistics object</returns>
         Task<EstadisticasFacturaDTO> GetEstadisticasAsync(DateTime fechaInicio, DateTime fechaFin);
+
+        Task<FacturaDTO> SyncFacturaAsync(SyncFacturaDTO syncDto);
+
+        Task<SyncFacturaResultDTO> SyncFacturasBatchAsync(List<SyncFacturaDTO> facturas);
+
+        Task<IEnumerable<FacturaDTO>> GetFacturasForSyncAsync(DateTime? lastSyncDate);
     }
 
     /// <summary>

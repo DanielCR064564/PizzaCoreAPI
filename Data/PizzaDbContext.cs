@@ -35,36 +35,124 @@ namespace PizzaCoreAPI.Data
         {
             base.OnModelCreating(modelBuilder);
 
-            // Configure basic relationships first
-            ConfigureBasicRelationships(modelBuilder);
-
-            // Skip Venta configuration for now - let EF Core use conventions
-            // ConfigureVentaEntitiesSimple(modelBuilder);
-
-            // Configure GUID properties for MySQL (use CHAR(36) for better performance)
-            ConfigureGuidProperties(modelBuilder);
-
-            // Configure string lengths for MySQL optimization
-            ConfigureStringLengths(modelBuilder);
-
-            // Configure decimal precision for MySQL
-            ConfigureDecimalPrecision(modelBuilder);
-
-            // Configure enum conversions for MySQL
-            ConfigureEnumConversions(modelBuilder);
+            // Use only the minimal configuration to avoid EF mapping issues
+            ConfigureMinimalConfigurations(modelBuilder);
         }
 
-        private void ConfigureIdentityTables(ModelBuilder modelBuilder)
+        private void ConfigureMinimalConfigurations(ModelBuilder modelBuilder)
         {
-            // Keep Identity tables as varchar(255) - this is the standard
-            // Our business entities will use varchar(36) but foreign keys to Identity will use varchar(255)
+            // Configure only the essential properties and relationships
+            // without complex configurations that might cause issues
+
+            // Configure basic decimal precision for MySQL
+            modelBuilder.Entity<Producto>()
+                .Property(p => p.Precio)
+                .HasColumnType("decimal(10,2)");
+
+            modelBuilder.Entity<Pedido>()
+                .Property(p => p.Total)
+                .HasColumnType("decimal(10,2)");
+
+            modelBuilder.Entity<PedidoDetalle>()
+                .Property(pd => pd.PrecioUnitario)
+                .HasColumnType("decimal(10,2)");
+
+            modelBuilder.Entity<PedidoDetalle>()
+                .Property(pd => pd.Subtotal)
+                .HasColumnType("decimal(10,2)");
+
+            // Configure basic enum conversions
+            modelBuilder.Entity<Producto>()
+                .Property(p => p.Tipo)
+                .HasConversion<string>()
+                .HasMaxLength(50);
+
+            modelBuilder.Entity<Pedido>()
+                .Property(p => p.Estado)
+                .HasConversion<string>()
+                .HasMaxLength(50);
+
+            // Configure Venta table mapping
+            modelBuilder.Entity<Venta>()
+                .ToTable("ventas");
+
+            modelBuilder.Entity<VentaDetalle>()
+                .ToTable("venta_detalles");
+
+            // Configure Venta properties
+            modelBuilder.Entity<Venta>()
+                .Property(v => v.Total)
+                .HasColumnType("decimal(10,2)");
+
+            modelBuilder.Entity<Venta>()
+                .Property(v => v.MetodoPago)
+                .HasConversion<string>()
+                .HasMaxLength(50);
+
+            modelBuilder.Entity<Venta>()
+                .Property(v => v.Estado)
+                .HasConversion<string>()
+                .HasMaxLength(50);
+
+            // Configure VentaDetalle properties
+            modelBuilder.Entity<VentaDetalle>()
+                .Property(vd => vd.PrecioUnitario)
+                .HasColumnType("decimal(10,2)");
+
+            modelBuilder.Entity<VentaDetalle>()
+                .Property(vd => vd.Subtotal)
+                .HasColumnType("decimal(10,2)");
+
+            // Configure Factura table mapping to avoid conflicts
+            modelBuilder.Entity<Factura>()
+                .ToTable("factura");
+
+            modelBuilder.Entity<Factura>()
+                .Property(f => f.Total)
+                .HasColumnType("decimal(10,2)");
+
+            modelBuilder.Entity<Factura>()
+                .Property(f => f.IVA)
+                .HasColumnType("decimal(10,2)");
+
+            modelBuilder.Entity<Factura>()
+                .Property(f => f.Estado)
+                .HasConversion<string>()
+                .HasMaxLength(50);
+
+            // Configure basic relationships that are essential
+            modelBuilder.Entity<PedidoDetalle>()
+                .HasOne(pd => pd.Pedido)
+                .WithMany(p => p.Detalles)
+                .HasForeignKey(pd => pd.PedidoId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<VentaDetalle>()
+                .HasOne(vd => vd.Venta)
+                .WithMany(v => v.Detalles)
+                .HasForeignKey(vd => vd.VentaId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Configure Pedido-Usuario relationships explicitly
+            modelBuilder.Entity<Pedido>()
+                .HasOne(p => p.Cliente)
+                .WithMany(u => u.Pedidos)
+                .HasForeignKey(p => p.ClienteId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Pedido>()
+                .HasOne(p => p.Empleado)
+                .WithMany(u => u.PedidosEmpleado)
+                .HasForeignKey(p => p.EmpleadoId)
+                .OnDelete(DeleteBehavior.Restrict);
         }
 
-        private void ConfigureVentaEntities(ModelBuilder modelBuilder)
+        private void ConfigureVentaEntitiesSimplified(ModelBuilder modelBuilder)
         {
-            // Configure Venta entity with string ID
+            // Configure Venta entity with minimal configuration to avoid conflicts
             modelBuilder.Entity<Venta>(entity =>
             {
+                entity.ToTable("ventas");
                 entity.HasKey(v => v.Id);
 
                 entity.Property(v => v.Id)
@@ -106,28 +194,7 @@ namespace PizzaCoreAPI.Data
                 entity.Property(v => v.Total)
                     .HasColumnType("decimal(10,2)");
 
-                // Configure relationships - temporarily disable WithMany to test
-                entity.HasOne(v => v.Cliente)
-                    .WithMany()
-                    .HasForeignKey(v => v.ClienteId)
-                    .OnDelete(DeleteBehavior.Restrict);
-
-                entity.HasOne(v => v.Empleado)
-                    .WithMany()
-                    .HasForeignKey(v => v.EmpleadoId)
-                    .OnDelete(DeleteBehavior.Restrict);
-
-                entity.HasOne(v => v.Pedido)
-                    .WithMany()
-                    .HasForeignKey(v => v.PedidoId)
-                    .OnDelete(DeleteBehavior.SetNull);
-
-                entity.HasOne(v => v.Factura)
-                    .WithMany()
-                    .HasForeignKey(v => v.FacturaId)
-                    .OnDelete(DeleteBehavior.SetNull);
-
-                // Configure indexes
+                // Configure indexes only - avoid complex relationships for now
                 entity.HasIndex(v => v.NumeroOrden).HasDatabaseName("IX_Venta_NumeroOrden");
                 entity.HasIndex(v => v.FechaVenta).HasDatabaseName("IX_Venta_FechaVenta");
                 entity.HasIndex(v => v.Estado).HasDatabaseName("IX_Venta_Estado");
@@ -137,9 +204,10 @@ namespace PizzaCoreAPI.Data
                 entity.HasIndex(v => v.FacturaId).HasDatabaseName("IX_Ventas_FacturaId");
             });
 
-            // Configure VentaDetalle entity - simplified approach
+            // Configure VentaDetalle entity with minimal configuration
             modelBuilder.Entity<VentaDetalle>(entity =>
             {
+                entity.ToTable("venta_detalles");
                 entity.HasKey(vd => vd.Id);
 
                 entity.Property(vd => vd.Id)
@@ -152,8 +220,8 @@ namespace PizzaCoreAPI.Data
                     .HasColumnType("char(36)")
                     .IsRequired();
 
-                // Configure ProductoId as Guid (matches Producto.Id)
                 entity.Property(vd => vd.ProductoId)
+                    .HasMaxLength(36)
                     .HasColumnType("char(36)")
                     .IsRequired();
 
@@ -163,15 +231,138 @@ namespace PizzaCoreAPI.Data
                 entity.Property(vd => vd.Subtotal)
                     .HasColumnType("decimal(10,2)");
 
-                // Configure relationships - temporarily disable WithMany to test
+                // Configure basic relationship
                 entity.HasOne(vd => vd.Venta)
-                    .WithMany()
+                    .WithMany(v => v.Detalles)
                     .HasForeignKey(vd => vd.VentaId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                // Configure indexes
+                entity.HasIndex(vd => vd.VentaId).HasDatabaseName("IX_VentaDetalles_VentaId");
+                entity.HasIndex(vd => vd.ProductoId).HasDatabaseName("IX_VentaDetalles_ProductoId");
+            });
+        }
+
+        /*
+        private void ConfigureVentaEntities(ModelBuilder modelBuilder)
+        {
+            // Configure Venta entity with string ID
+            modelBuilder.Entity<Venta>(entity =>
+            {
+                entity.ToTable("ventas");
+                entity.HasKey(v => v.Id);
+
+                entity.Property(v => v.Id)
+                    .HasMaxLength(36)
+                    .HasColumnType("char(36)")
+                    .IsRequired();
+
+                entity.Property(v => v.NumeroOrden)
+                    .HasMaxLength(100)
+                    .IsRequired();
+
+                entity.Property(v => v.ClienteId)
+                    .HasMaxLength(255)
+                    .HasColumnType("varchar(255)");
+
+                entity.Property(v => v.EmpleadoId)
+                    .HasMaxLength(255)
+                    .HasColumnType("varchar(255)");
+
+                entity.Property(v => v.PedidoId)
+                    .HasMaxLength(36)
+                    .HasColumnType("varchar(36)");
+
+                entity.Property(v => v.FacturaId)
+                    .HasMaxLength(36)
+                    .HasColumnType("char(36)");
+
+                entity.Property(v => v.TerminalId)
+                    .HasMaxLength(50);
+
+                entity.Property(v => v.MetodoPago)
+                    .HasConversion<string>()
+                    .HasMaxLength(50);
+
+                entity.Property(v => v.Estado)
+                    .HasConversion<string>()
+                    .HasMaxLength(50);
+
+                entity.Property(v => v.Total)
+                    .HasColumnType("decimal(10,2)");
+
+                // Configure relationships - note: ClienteId references Usuario.Id, not Cliente.IdCliente
+                entity.HasOne(v => v.Empleado)
+                    .WithMany()
+                    .HasForeignKey(v => v.EmpleadoId)
+                    .HasConstraintName("FK_Ventas_Usuarios_EmpleadoId")
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(v => v.Pedido)
+                    .WithMany()
+                    .HasForeignKey(v => v.PedidoId)
+                    .HasConstraintName("FK_Ventas_Pedidos_PedidoId")
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasOne(v => v.Factura)
+                    .WithMany()
+                    .HasForeignKey(v => v.FacturaId)
+                    .HasConstraintName("FK_Ventas_Facturas_FacturaId")
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                // CRITICAL: The Cliente navigation property has been removed from the Venta entity
+                // to prevent EF from auto-generating foreign key references that don't exist in the database
+                // ClienteId is handled as a simple string property referencing Usuario.Id
+
+                // Configure indexes
+                entity.HasIndex(v => v.NumeroOrden).HasDatabaseName("IX_Venta_NumeroOrden");
+                entity.HasIndex(v => v.FechaVenta).HasDatabaseName("IX_Venta_FechaVenta");
+                entity.HasIndex(v => v.Estado).HasDatabaseName("IX_Venta_Estado");
+                entity.HasIndex(v => v.ClienteId).HasDatabaseName("IX_Venta_ClienteId");
+                entity.HasIndex(v => v.EmpleadoId).HasDatabaseName("IX_Ventas_EmpleadoId");
+                entity.HasIndex(v => v.PedidoId).HasDatabaseName("IX_Ventas_PedidoId");
+                entity.HasIndex(v => v.FacturaId).HasDatabaseName("IX_Ventas_FacturaId");
+            });
+
+            // Configure VentaDetalle entity
+            modelBuilder.Entity<VentaDetalle>(entity =>
+            {
+                entity.ToTable("venta_detalles");
+                entity.HasKey(vd => vd.Id);
+
+                entity.Property(vd => vd.Id)
+                    .HasMaxLength(36)
+                    .HasColumnType("char(36)")
+                    .IsRequired();
+
+                entity.Property(vd => vd.VentaId)
+                    .HasMaxLength(36)
+                    .HasColumnType("char(36)")
+                    .IsRequired();
+
+                // Configure ProductoId as string to match the property type
+                entity.Property(vd => vd.ProductoId)
+                    .HasMaxLength(36)
+                    .HasColumnType("char(36)")
+                    .IsRequired();
+
+                entity.Property(vd => vd.PrecioUnitario)
+                    .HasColumnType("decimal(10,2)");
+
+                entity.Property(vd => vd.Subtotal)
+                    .HasColumnType("decimal(10,2)");
+
+                // Configure relationships with explicit foreign key properties
+                entity.HasOne(vd => vd.Venta)
+                    .WithMany(v => v.Detalles)
+                    .HasForeignKey(vd => vd.VentaId)
+                    .HasConstraintName("FK_VentaDetalles_Ventas_VentaId")
                     .OnDelete(DeleteBehavior.Cascade);
 
                 entity.HasOne(vd => vd.Producto)
                     .WithMany()
                     .HasForeignKey(vd => vd.ProductoId)
+                    .HasConstraintName("FK_VentaDetalles_Productos_ProductoId")
                     .OnDelete(DeleteBehavior.Restrict);
 
                 // Configure indexes
@@ -179,6 +370,7 @@ namespace PizzaCoreAPI.Data
                 entity.HasIndex(vd => vd.ProductoId).HasDatabaseName("IX_VentaDetalles_ProductoId");
             });
         }
+        */
 
         private void ConfigureVentaEntitiesSimple(ModelBuilder modelBuilder)
         {

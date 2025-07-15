@@ -284,5 +284,173 @@ namespace PizzaCoreAPI.Services
                 TasaCobranza = tasaCobranza
             };
         }
+
+        public async Task<FacturaDTO> SyncFacturaAsync(SyncFacturaDTO syncDto)
+        {
+            try
+            {
+                // Check if factura already exists
+                var existingFactura = await _context.Facturas
+                    .FirstOrDefaultAsync(f => f.Id == syncDto.IdFactura);
+
+                if (existingFactura != null)
+                {
+                    // Map delivery types to match database enum values
+                    string tipoEntregaDb = syncDto.TipoEntrega switch
+                    {
+                        "Delivery" => "Domicilio",
+                        "Para Llevar" => "Para_Llevar",
+                        "Local" => "Local",
+                        _ => "Local" // Default fallback
+                    };
+
+                    // Update existing factura if needed
+                    bool hasChanges = false;
+
+                    if (existingFactura.Total != syncDto.Total ||
+                        existingFactura.Estado != syncDto.Estado ||
+                        existingFactura.FechaFactura != syncDto.FechaFactura ||
+                        existingFactura.TipoEntrega != tipoEntregaDb)
+                    {
+                        existingFactura.Total = syncDto.Total;
+                        existingFactura.Subtotal = syncDto.Subtotal;
+                        existingFactura.IVA = syncDto.IVA;
+                        existingFactura.Estado = syncDto.Estado;
+                        existingFactura.FechaFactura = syncDto.FechaFactura;
+                        existingFactura.TipoEntrega = tipoEntregaDb;
+                        existingFactura.Notas = syncDto.Notas;
+                        existingFactura.SyncCompletado = true;
+                        existingFactura.SyncUltimoIntento = DateTime.UtcNow;
+                        existingFactura.SyncError = null;
+                        hasChanges = true;
+                    }
+
+                    if (hasChanges)
+                    {
+                        await _context.SaveChangesAsync();
+                    }
+
+                    return await GetFacturaByIdAsync(existingFactura.Id) ?? throw new InvalidOperationException("Failed to retrieve updated factura");
+                }
+                else
+                {
+                    // Map delivery types to match database enum values
+                    string tipoEntregaDb = syncDto.TipoEntrega switch
+                    {
+                        "Delivery" => "Domicilio",
+                        "Para Llevar" => "Para_Llevar",
+                        "Local" => "Local",
+                        _ => "Local" // Default fallback
+                    };
+
+                    // Create new factura
+                    var newFactura = new Factura
+                    {
+                        Id = syncDto.IdFactura, // Use the ID from POS
+                        FechaFactura = syncDto.FechaFactura,
+                        FkCliente = syncDto.FkCliente,
+                        TipoEntrega = tipoEntregaDb,
+                        Subtotal = syncDto.Subtotal,
+                        IVA = syncDto.IVA,
+                        Total = syncDto.Total,
+                        Estado = syncDto.Estado,
+                        EmpleadoId = syncDto.EmpleadoId,
+                        FechaCreacion = syncDto.FechaCreacion,
+                        Notas = syncDto.Notas,
+                        SyncCompletado = true,
+                        SyncUltimoIntento = DateTime.UtcNow,
+                        SyncIntentos = 1,
+                        SyncError = null
+                    };
+
+                    _context.Facturas.Add(newFactura);
+                    await _context.SaveChangesAsync();
+
+                    return await GetFacturaByIdAsync(newFactura.Id) ?? throw new InvalidOperationException("Failed to retrieve created factura");
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log the error
+                throw new InvalidOperationException($"Error syncing factura {syncDto.IdFactura}: {ex.Message}", ex);
+            }
+        }
+
+        public async Task<SyncFacturaResultDTO> SyncFacturasBatchAsync(List<SyncFacturaDTO> facturas)
+        {
+            var result = new SyncFacturaResultDTO
+            {
+                TotalReceived = facturas.Count
+            };
+
+            foreach (var factura in facturas)
+            {
+                try
+                {
+                    var existingFactura = await _context.Facturas
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(f => f.Id == factura.IdFactura);
+
+                    if (existingFactura != null)
+                    {
+                        // Update logic
+                        await SyncFacturaAsync(factura);
+                        result.Updated++;
+                    }
+                    else
+                    {
+                        // Create new
+                        await SyncFacturaAsync(factura);
+                        result.Synced++;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    result.Failed++;
+                    result.Errors.Add(new SyncFacturaErrorDTO
+                    {
+                        FacturaId = factura.IdFactura,
+                        Error = ex.Message
+                    });
+                }
+            }
+
+            return result;
+        }
+
+        public async Task<IEnumerable<FacturaDTO>> GetFacturasForSyncAsync(DateTime? lastSyncDate)
+        {
+            var query = _context.Facturas.AsQueryable();
+
+            if (lastSyncDate.HasValue)
+            {
+                query = query.Where(f => f.FechaCreacion > lastSyncDate.Value ||
+                                         (f.SyncUltimoIntento.HasValue && f.SyncUltimoIntento > lastSyncDate.Value));
+            }
+
+            var facturas = await query
+                .OrderBy(f => f.FechaCreacion)
+                .ToListAsync();
+
+            return facturas.Select(f => new FacturaDTO
+            {
+                Id = f.Id,
+                FechaFactura = f.FechaFactura,
+                FkCliente = f.FkCliente,
+                TipoEntrega = f.TipoEntrega,
+                Subtotal = f.Subtotal,
+                IVA = f.IVA,
+                Total = f.Total,
+                Estado = f.Estado,
+                EmpleadoId = f.EmpleadoId,
+                FechaCreacion = f.FechaCreacion,
+                Notas = f.Notas,
+                NombreCliente = "Cliente General",
+                DireccionCliente = "N/A",
+                NombreEmpleado = "Sistema",
+                RNC = "N/A",
+                RNCEmpleado = "N/A"
+            });
+        }
     }
 }

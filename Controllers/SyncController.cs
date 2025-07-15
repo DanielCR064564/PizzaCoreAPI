@@ -21,19 +21,22 @@ namespace PizzaCoreAPI.Controllers
         private readonly IVentaService _ventaService;
         private readonly ILogger<SyncController> _logger;
         private readonly ProductoSyncService _productoSyncService;
+        private readonly IFacturaService _facturaService;
 
         public SyncController(
             IProductoService productoService,
             IPedidoService pedidoService,
             IVentaService ventaService,
             ILogger<SyncController> logger,
-            ProductoSyncService productoSyncService)
+            ProductoSyncService productoSyncService,
+            IFacturaService facturaService)
         {
             _productoService = productoService;
             _pedidoService = pedidoService;
             _ventaService = ventaService;
             _logger = logger;
             _productoSyncService = productoSyncService;
+            _facturaService = facturaService;
         }
 
         [HttpGet("health")]
@@ -138,6 +141,138 @@ namespace PizzaCoreAPI.Controllers
             }
 
             return Ok(new { processed = results.Count, results });
+        }
+
+        [HttpPost("facturas")]
+        public async Task<IActionResult> SyncFactura([FromBody] SyncFacturaDTO factura)
+        {
+            try
+            {
+                if (factura == null)
+                {
+                    return BadRequest(new { success = false, error = "Invalid factura data" });
+                }
+
+                _logger.LogInformation($"Receiving factura sync - ID: {factura.IdFactura}, Total: {factura.Total}, Estado: '{factura.Estado}'");
+
+                var result = await _facturaService.SyncFacturaAsync(factura);
+
+                _logger.LogInformation($"Factura synced successfully with ID: {result.Id}");
+
+                return Ok(new
+                {
+                    success = true,
+                    facturaId = result.Id,
+                    numeroFactura = result.NumeroFactura,
+                    estado = result.Estado
+                });
+            }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogError(ex, "Business logic error for factura: {FacturaId}", factura?.IdFactura ?? 0);
+                return BadRequest(new { success = false, error = ex.Message, type = "business_error" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error for factura: {FacturaId}", factura?.IdFactura ?? 0);
+                return StatusCode(500, new { success = false, error = "Internal server error", type = "server_error" });
+            }
+        }
+
+        [HttpPost("facturas/batch")]
+        public async Task<IActionResult> SyncFacturasBatch([FromBody] SyncFacturaBatchDTO batch)
+        {
+            try
+            {
+                if (batch == null || batch.Facturas == null || !batch.Facturas.Any())
+                {
+                    return BadRequest(new { success = false, error = "Invalid batch data" });
+                }
+
+                _logger.LogInformation($"Receiving batch factura sync - Count: {batch.Facturas.Count}, Terminal: '{batch.TerminalId}'");
+
+                var result = await _facturaService.SyncFacturasBatchAsync(batch.Facturas);
+
+                _logger.LogInformation($"Batch sync completed - Synced: {result.Synced}, Updated: {result.Updated}, Failed: {result.Failed}");
+
+                return Ok(new
+                {
+                    success = true,
+                    result = result,
+                    terminalId = batch.TerminalId,
+                    timestamp = batch.SyncTimestamp
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error in batch factura sync");
+                return StatusCode(500, new
+                {
+                    success = false,
+                    error = "Internal server error",
+                    type = "server_error",
+                    details = ex.Message
+                });
+            }
+        }
+
+        [HttpGet("facturas/pending")]
+        public async Task<IActionResult> GetPendingFacturas([FromQuery] DateTime? lastSyncDate)
+        {
+            try
+            {
+                _logger.LogInformation($"Getting pending facturas since: {lastSyncDate?.ToString() ?? "all"}");
+
+                var facturas = await _facturaService.GetFacturasForSyncAsync(lastSyncDate);
+
+                return Ok(new
+                {
+                    success = true,
+                    count = facturas.Count(),
+                    facturas = facturas
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting pending facturas");
+                return StatusCode(500, new
+                {
+                    success = false,
+                    error = "Internal server error",
+                    type = "server_error"
+                });
+            }
+        }
+
+        [HttpGet("facturas/status")]
+        public async Task<IActionResult> GetSyncStatus()
+        {
+            try
+            {
+                var stats = await _facturaService.GetEstadisticasAsync(
+                    DateTime.UtcNow.AddDays(-30),
+                    DateTime.UtcNow
+                );
+
+                return Ok(new
+                {
+                    success = true,
+                    totalFacturas = stats.TotalFacturas,
+                    pendientes = stats.FacturasPendientes,
+                    pagadas = stats.FacturasPagadas,
+                    lastSync = DateTime.UtcNow
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting sync status");
+                return StatusCode(500, new
+                {
+                    success = false,
+                    error = "Internal server error",
+                    type = "server_error"
+                });
+            }
         }
 
         private MetodoPago ConvertMetodoPago(string metodoPago)

@@ -17,11 +17,11 @@ namespace PizzaCoreAPI.Models
         public string NumeroOrden { get; set; } = string.Empty;
 
         [Column("cliente_id")]
-        [StringLength(36)]
+        [StringLength(255)]
         public string? ClienteId { get; set; }
 
         [Column("empleado_id")]
-        [StringLength(36)]
+        [StringLength(255)]
         public string? EmpleadoId { get; set; }
 
         [Column("fecha_venta")]
@@ -55,8 +55,8 @@ namespace PizzaCoreAPI.Models
         public DateTime FechaActualizacion { get; set; } = DateTime.Now;
 
         // Navigation properties
-        [JsonIgnore]
-        public virtual Cliente? Cliente { get; set; }
+        // Note: Cliente navigation property temporarily removed to avoid EF mapping conflicts
+        // ClienteId references Usuario.Id, not Cliente.IdCliente
 
         [JsonIgnore]
         public virtual Usuario? Empleado { get; set; }

@@ -25,7 +25,6 @@ namespace PizzaCoreAPI.Services
         public async Task<IEnumerable<VentaDTO>> GetAllVentasAsync()
         {
             var ventas = await _context.Ventas
-                .Include(v => v.Cliente)
                 .Include(v => v.Empleado)
                 .Include(v => v.Detalles)
                 .ThenInclude(d => d.Producto)
@@ -38,7 +37,6 @@ namespace PizzaCoreAPI.Services
         public async Task<VentaDTO?> GetVentaByIdAsync(string id)
         {
             var venta = await _context.Ventas
-                .Include(v => v.Cliente)
                 .Include(v => v.Empleado)
                 .Include(v => v.Detalles)
                 .ThenInclude(d => d.Producto)
@@ -50,7 +48,6 @@ namespace PizzaCoreAPI.Services
         public async Task<VentaDTO?> GetVentaByNumeroOrdenAsync(string numeroOrden)
         {
             var venta = await _context.Ventas
-                .Include(v => v.Cliente)
                 .Include(v => v.Empleado)
                 .Include(v => v.Detalles)
                 .ThenInclude(d => d.Producto)
@@ -62,7 +59,6 @@ namespace PizzaCoreAPI.Services
         public async Task<IEnumerable<VentaDTO>> GetVentasByClienteAsync(string clienteId)
         {
             var ventas = await _context.Ventas
-                .Include(v => v.Cliente)
                 .Include(v => v.Empleado)
                 .Include(v => v.Detalles)
                 .ThenInclude(d => d.Producto)
@@ -76,7 +72,6 @@ namespace PizzaCoreAPI.Services
         public async Task<IEnumerable<VentaDTO>> GetVentasByEstadoAsync(EstadoVenta estado)
         {
             var ventas = await _context.Ventas
-                .Include(v => v.Cliente)
                 .Include(v => v.Empleado)
                 .Include(v => v.Detalles)
                 .ThenInclude(d => d.Producto)
@@ -90,7 +85,6 @@ namespace PizzaCoreAPI.Services
         public async Task<IEnumerable<VentaDTO>> GetVentasByFechaAsync(DateTime fechaInicio, DateTime fechaFin)
         {
             var ventas = await _context.Ventas
-                .Include(v => v.Cliente)
                 .Include(v => v.Empleado)
                 .Include(v => v.Detalles)
                 .ThenInclude(d => d.Producto)
@@ -196,12 +190,35 @@ namespace PizzaCoreAPI.Services
 
         public async Task<VentaDTO> CreateVentaFromSyncAsync(SyncVentaDTO syncDto)
         {
-            // Check if sale already exists
+            // Check if sale already exists - use explicit SELECT to avoid navigation property issues
             var existingVenta = await _context.Ventas
-                .FirstOrDefaultAsync(v => v.NumeroOrden == syncDto.NumeroOrden);
+                .AsNoTracking()
+                .Where(v => v.NumeroOrden == syncDto.NumeroOrden)
+                .Select(v => new { v.Id, v.NumeroOrden, v.FechaVenta, v.Total, v.Estado, v.ClienteId, v.EmpleadoId, v.MetodoPago, v.TerminalId, v.PedidoId, v.FacturaId, v.FechaCreacion, v.FechaActualizacion })
+                .FirstOrDefaultAsync();
 
             if (existingVenta != null)
-                return MapToDTO(existingVenta);
+            {
+                // Manually create the DTO from the anonymous object to avoid EF navigation issues
+                return new VentaDTO
+                {
+                    Id = Guid.Parse(existingVenta.Id),
+                    NumeroOrden = existingVenta.NumeroOrden,
+                    ClienteId = existingVenta.ClienteId,
+                    ClienteNombre = null, // Set to null since we can't easily get this without navigation
+                    EmpleadoId = existingVenta.EmpleadoId,
+                    EmpleadoNombre = null, // Set to null since we can't easily get this without navigation
+                    FechaVenta = existingVenta.FechaVenta,
+                    Total = existingVenta.Total,
+                    MetodoPago = existingVenta.MetodoPago.ToString(),
+                    TerminalId = existingVenta.TerminalId,
+                    Estado = existingVenta.Estado.ToString(),
+                    PedidoId = existingVenta.PedidoId,
+                    FacturaId = string.IsNullOrEmpty(existingVenta.FacturaId) ? null : Guid.Parse(existingVenta.FacturaId),
+                    FechaCreacion = existingVenta.FechaCreacion,
+                    Detalles = new List<VentaDetalleDTO>() // Empty list for now
+                };
+            }
 
             var createVentaDto = new CrearVentaDTO
             {
@@ -335,7 +352,7 @@ namespace PizzaCoreAPI.Services
                 Id = Guid.Parse(venta.Id), // Convert string ID back to Guid for DTO compatibility
                 NumeroOrden = venta.NumeroOrden,
                 ClienteId = venta.ClienteId,
-                ClienteNombre = venta.Cliente?.NombreCompleto,
+                ClienteNombre = null, // Cliente navigation property removed - set to null
                 EmpleadoId = venta.EmpleadoId,
                 EmpleadoNombre = venta.Empleado?.NombreCompleto,
                 FechaVenta = venta.FechaVenta,

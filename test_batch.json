@@ -1,0 +1,30 @@
+{
+    "facturas": [
+        {
+            "idFactura": 1001,
+            "fechaFactura": "2025-01-15T10:30:00",
+            "fkCliente": 1,
+            "tipoEntrega": "Local",
+            "subtotal": 1000.00,
+            "iva": 180.00,
+            "total": 1180.00,
+            "estado": "Pagado",
+            "empleadoId": 1,
+            "fechaCreacion": "2025-01-15T10:30:00"
+        },
+        {
+            "idFactura": 1002,
+            "fechaFactura": "2025-01-15T11:00:00",
+            "fkCliente": 2,
+            "tipoEntrega": "Delivery",
+            "subtotal": 1500.00,
+            "iva": 270.00,
+            "total": 1770.00,
+            "estado": "Pendiente",
+            "empleadoId": 1,
+            "fechaCreacion": "2025-01-15T11:00:00"
+        }
+    ],
+    "terminalId": "POS-001",
+    "syncTimestamp": "2025-01-15T12:00:00Z"
+}
