@@ -11,6 +11,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
 using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Mvc;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -22,6 +23,14 @@ builder.WebHost.ConfigureKestrel(serverOptions =>
     {
         listenOptions.UseHttps();
     });
+});
+
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader());
 });
 
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
@@ -72,9 +81,16 @@ builder.Services.AddIdentity<Usuario, Rol>()
     .AddEntityFrameworkStores<PizzaDbContext>()
     .AddDefaultTokenProviders();
 
-// DB Context
+// Dbcontext
 builder.Services.AddDbContext<PizzaDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("PizzaDb")));
+    options.UseMySql(
+        builder.Configuration.GetConnectionString("PizzaDb"),
+        ServerVersion.AutoDetect(builder.Configuration.GetConnectionString("PizzaDb")),
+        mysqlOptions =>
+        {
+            mysqlOptions.EnableRetryOnFailure();
+        }
+    ));
 
 // JWT
 builder.Services.AddAuthentication(options =>
@@ -102,11 +118,40 @@ builder.Services.AddScoped<IMenuService, MenuService>();
 builder.Services.AddScoped<IPagoService, PagoService>();
 builder.Services.AddScoped<IMetodoDePagoService, MetodoDePagoService>();
 builder.Services.AddScoped<ICuentasPorCobrarService, CuentasPorCobrarService>();
+builder.Services.AddScoped<IIngredienteService, IngredienteService>();
+builder.Services.AddScoped<IPedidoService, PedidoService>();
+builder.Services.AddScoped<IFacturaService, FacturaService>();
+builder.Services.AddScoped<IClienteService, ClienteService>();
+builder.Services.AddScoped<IVentaService, VentaService>();
+builder.Services.AddScoped<ProductoSyncService>();
 builder.Services.AddScoped<RoleInitializer>();
+
+builder.Services.Configure<ApiBehaviorOptions>(options =>
+{
+    options.InvalidModelStateResponseFactory = context =>
+    {
+        var errors = context.ModelState
+            .Where(e => e.Value.Errors.Count > 0)
+            .SelectMany(x => x.Value.Errors)
+            .Select(x => x.ErrorMessage);
+
+        return new BadRequestObjectResult(new
+        {
+            message = "Validation failed",
+            errors = errors
+        });
+    };
+});
+
+builder.Logging.AddConfiguration(builder.Configuration.GetSection("Logging"));
+builder.Logging.AddConsole();
+builder.Logging.AddDebug();
 
 var app = builder.Build();
 
-// Swagger
+app.UseCors();
+
+// Swagger 
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();

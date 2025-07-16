@@ -13,41 +13,45 @@ namespace PizzaCoreAPI.Services
     {
         private readonly PizzaDbContext _context;
         public CuentasPorCobrarService(PizzaDbContext context) { _context = context; }
-        public async Task<IEnumerable<CuentasPorCobrarDTO>> GetAllAsync() => await _context.CuentasPorCobrar.Select(c => new CuentasPorCobrarDTO {
+        public async Task<IEnumerable<CuentasPorCobrarDTO>> GetAllAsync() => await _context.CuentasPorCobrar.Select(c => new CuentasPorCobrarDTO
+        {
             Id = c.Id,
             ClienteId = c.ClienteId,
             PedidoId = c.PedidoId,
             MontoPendiente = c.MontoPendiente,
             FechaVencimiento = c.FechaVencimiento,
-            Estado = c.Estado
+            Estado = c.Estado.ToString()
         }).ToListAsync();
-        public async Task<CuentasPorCobrarDTO?> GetByIdAsync(string id) => await _context.CuentasPorCobrar.Where(c => c.Id == id).Select(c => new CuentasPorCobrarDTO {
+        public async Task<CuentasPorCobrarDTO?> GetByIdAsync(string id) => await _context.CuentasPorCobrar.Where(c => c.Id == id).Select(c => new CuentasPorCobrarDTO
+        {
             Id = c.Id,
             ClienteId = c.ClienteId,
             PedidoId = c.PedidoId,
             MontoPendiente = c.MontoPendiente,
             FechaVencimiento = c.FechaVencimiento,
-            Estado = c.Estado
+            Estado = c.Estado.ToString()
         }).FirstOrDefaultAsync();
         public async Task<CuentasPorCobrarDTO> CreateAsync(CrearCuentasPorCobrarDTO dto)
         {
-            var cuenta = new CuentasPorCobrar {
+            var cuenta = new CuentasPorCobrar
+            {
                 Id = Guid.NewGuid().ToString(),
                 ClienteId = dto.ClienteId,
                 PedidoId = dto.PedidoId,
                 MontoPendiente = dto.MontoPendiente,
                 FechaVencimiento = dto.FechaVencimiento,
-                Estado = dto.Estado
+                Estado = Enum.Parse<EstadoCuentaPorCobrar>(dto.Estado, ignoreCase: true)
             };
             _context.CuentasPorCobrar.Add(cuenta);
             await _context.SaveChangesAsync();
-            return new CuentasPorCobrarDTO {
+            return new CuentasPorCobrarDTO
+            {
                 Id = cuenta.Id,
                 ClienteId = cuenta.ClienteId,
                 PedidoId = cuenta.PedidoId,
                 MontoPendiente = cuenta.MontoPendiente,
                 FechaVencimiento = cuenta.FechaVencimiento,
-                Estado = cuenta.Estado
+                Estado = cuenta.Estado.ToString()
             };
         }
         public async Task<bool> UpdateAsync(string id, CrearCuentasPorCobrarDTO dto)
@@ -58,7 +62,7 @@ namespace PizzaCoreAPI.Services
             cuenta.PedidoId = dto.PedidoId;
             cuenta.MontoPendiente = dto.MontoPendiente;
             cuenta.FechaVencimiento = dto.FechaVencimiento;
-            cuenta.Estado = dto.Estado;
+            cuenta.Estado = Enum.Parse<EstadoCuentaPorCobrar>(dto.Estado, ignoreCase: true);
             await _context.SaveChangesAsync();
             return true;
         }

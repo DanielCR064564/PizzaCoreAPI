@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using PizzaCoreAPI.Data;
+using PizzaCoreAPI.DTOs;
+using PizzaCoreAPI.Interfaces;
 using PizzaCoreAPI.Models;
 using System;
 using System.Collections.Generic;
@@ -12,66 +12,83 @@ namespace PizzaCoreAPI.Controllers
     [Route("api/[controller]")]
     public class IngredientesController : ControllerBase
     {
-        private readonly PizzaDbContext _context;
+        private readonly IIngredienteService _ingredienteService;
 
-        public IngredientesController(PizzaDbContext context)
+        public IngredientesController(IIngredienteService ingredienteService)
         {
-            _context = context;
+            _ingredienteService = ingredienteService;
         }
 
         // GET: api/Ingredientes
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Ingrediente>>> GetIngredientes()
+        public async Task<ActionResult<IEnumerable<IngredienteDTO>>> GetIngredientes()
         {
-            return await _context.Ingredientes.ToListAsync();
+            var ingredientes = await _ingredienteService.GetAllIngredientesAsync();
+            return Ok(ingredientes);
         }
 
         // GET: api/Ingredientes/{id}
         [HttpGet("{id}")]
-        public async Task<ActionResult<Ingrediente>> GetIngrediente(Guid id)
+        public async Task<ActionResult<IngredienteDTO>> GetIngrediente(Guid id)
         {
-            var ingrediente = await _context.Ingredientes.FindAsync(id);
+            var ingrediente = await _ingredienteService.GetIngredienteByIdAsync(id);
             if (ingrediente == null)
                 return NotFound();
 
-            return ingrediente;
+            return Ok(ingrediente);
         }
 
         // POST: api/Ingredientes
         [HttpPost]
-        public async Task<ActionResult<Ingrediente>> PostIngrediente(Ingrediente ingrediente)
+        public async Task<ActionResult<IngredienteDTO>> PostIngrediente([FromBody] CrearIngredienteDTO ingredienteDto)
         {
-            _context.Ingredientes.Add(ingrediente);
-            await _context.SaveChangesAsync();
-
-            return CreatedAtAction("GetIngrediente", new { id = ingrediente.Id }, ingrediente);
+            try
+            {
+                var ingrediente = await _ingredienteService.CreateIngredienteAsync(ingredienteDto);
+                return CreatedAtAction(nameof(GetIngrediente), new { id = ingrediente.Id }, ingrediente);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { 
+                    message = $"Invalid tipo value. Use GET /api/Ingredientes/tipos to see all valid values", 
+                    error = ex.Message 
+                });
+            }
         }
 
         // PUT: api/Ingredientes/{id}
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutIngrediente(Guid id, Ingrediente ingrediente)
+        public async Task<IActionResult> PutIngrediente(Guid id, [FromBody] CrearIngredienteDTO ingredienteDto)
         {
-            if (id != ingrediente.Id)
-                return BadRequest();
-
-            _context.Entry(ingrediente).State = EntityState.Modified;
-            await _context.SaveChangesAsync();
-
-            return NoContent();
+            try
+            {
+                await _ingredienteService.UpdateIngredienteAsync(id, ingredienteDto);
+                return NoContent();
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { 
+                    message = $"Invalid tipo value. Use GET /api/Ingredientes/tipos to see all valid values", 
+                    error = ex.Message 
+                });
+            }
         }
 
         // DELETE: api/Ingredientes/{id}
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteIngrediente(Guid id)
         {
-            var ingrediente = await _context.Ingredientes.FindAsync(id);
-            if (ingrediente == null)
-                return NotFound();
-
-            _context.Ingredientes.Remove(ingrediente);
-            await _context.SaveChangesAsync();
-
+            await _ingredienteService.DeleteIngredienteAsync(id);
             return NoContent();
+        }
+
+        // GET: api/Ingredientes/tipos - Helper endpoint to see available types
+        [HttpGet("tipos")]
+        public IActionResult GetTiposIngrediente()
+        {
+            var tipos = Enum.GetValues<TipoIngrediente>()
+                .Select(t => new { Value = (int)t, Name = t.ToString() });
+            return Ok(tipos);
         }
     }
 }

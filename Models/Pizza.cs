@@ -21,8 +21,6 @@ namespace PizzaCoreAPI.Models
         public bool Disponible { get; set; } = true;
 
         public virtual ICollection<Ingrediente> Ingredientes { get; set; } = new List<Ingrediente>();
-        public virtual ICollection<PedidoDetalle> PedidoDetalles { get; set; } = new List<PedidoDetalle>();
-
-        public virtual ICollection<Menu> Menus { get; set; } = new List<Menu>(); 
+        public virtual ICollection<Menu> Menus { get; set; } = new List<Menu>();
     }
 }

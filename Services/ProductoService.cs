@@ -22,7 +22,7 @@ namespace PizzaCoreAPI.Services
         public async Task<List<ProductoDTO>> GetAllProductosAsync()
         {
             var productos = await _context.Productos
-                .Include(p => p.Ingredientes)
+                .AsNoTracking()
                 .ToListAsync();
 
             return productos.Select(p => new ProductoDTO
@@ -33,17 +33,19 @@ namespace PizzaCoreAPI.Services
                 Precio = p.Precio,
                 Tipo = p.Tipo.ToString(),
                 Disponible = p.Disponible,
-                Ingredientes = p.Ingredientes.Select(i => new IngredienteDTO
-                {
-                    Id = i.Id,
-                    Nombre = i.Nombre,
-                    PrecioAdicional = i.PrecioAdicional,
-                    Tipo = i.Tipo.ToString()
-                }).ToList()
+                Stock = p.Stock,
+                FechaCreacion = p.FechaCreacion,
+                FechaActualizacion = p.FechaActualizacion,
+                ApiId = p.ApiId,
+                SincronizadoConAPI = p.SincronizadoConAPI,
+                Imagen = p.Imagen,
+                IngredientesTexto = p.IngredientesTexto,
+                TiempoPreparacion = p.TiempoPreparacion,
+                Ingredientes = new List<IngredienteDTO>() // Empty for now
             }).ToList();
         }
 
-        public async Task<ProductoDTO> GetProductoByIdAsync(Guid id)
+        public async Task<ProductoDTO?> GetProductoByIdAsync(Guid id)
         {
             var producto = await _context.Productos
                 .Include(p => p.Ingredientes)
@@ -60,6 +62,14 @@ namespace PizzaCoreAPI.Services
                 Precio = producto.Precio,
                 Tipo = producto.Tipo.ToString(),
                 Disponible = producto.Disponible,
+                Stock = producto.Stock,
+                FechaCreacion = producto.FechaCreacion,
+                FechaActualizacion = producto.FechaActualizacion,
+                ApiId = producto.ApiId,
+                SincronizadoConAPI = producto.SincronizadoConAPI,
+                Imagen = producto.Imagen,
+                IngredientesTexto = producto.IngredientesTexto,
+                TiempoPreparacion = producto.TiempoPreparacion,
                 Ingredientes = producto.Ingredientes.Select(i => new IngredienteDTO
                 {
                     Id = i.Id,

@@ -1,25 +1,27 @@
-﻿using PizzaCoreAPI.Models;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 
-public class PedidoDetalle
+namespace PizzaCoreAPI.Models 
 {
-    public string Id { get; set; } = string.Empty;
+    public class PedidoDetalle
+    {
+        public string Id { get; set; } = string.Empty;
 
-    [Required]
-    public string PedidoId { get; set; } = string.Empty;
+        [Required]
+        public string PedidoId { get; set; } = string.Empty;
 
-    [Required]
-    public Guid ProductoId { get; set; }
+        [Required]
+        public Guid ProductoId { get; set; }
 
-    public int Cantidad { get; set; } = 1; // ✅ CAMBIADO de string a int
+        public int Cantidad { get; set; } = 1;
 
-    public decimal PrecioUnitario { get; set; }
+        public decimal PrecioUnitario { get; set; }
 
-    public decimal Subtotal { get; set; }
+        public decimal Subtotal { get; set; }
 
-    [JsonIgnore]
-    public virtual Pedido Pedido { get; set; } = null!;
+        [JsonIgnore]
+        public virtual Pedido Pedido { get; set; } = null!;
 
-    public virtual Producto Producto { get; set; } = null!;
+        public virtual Producto Producto { get; set; } = null!;
+    }
 }

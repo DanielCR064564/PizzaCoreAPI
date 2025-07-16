@@ -1,12 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using PizzaCoreAPI.Data;
-using PizzaCoreAPI.Models;
 using PizzaCoreAPI.DTOs;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using System.Linq;
+using PizzaCoreAPI.Models;
+using PizzaCoreAPI.Services;
+using PizzaCoreAPI.Interfaces;
 
 namespace PizzaCoreAPI.Controllers
 {
@@ -15,179 +12,218 @@ namespace PizzaCoreAPI.Controllers
     [Authorize(Roles = "Empleado,Administrador")]
     public class PedidosController : ControllerBase
     {
-        private readonly PizzaDbContext _context;
+        private readonly IPedidoService _pedidoService;
 
-        public PedidosController(PizzaDbContext context)
+        public PedidosController(IPedidoService pedidoService)
         {
-            _context = context;
+            _pedidoService = pedidoService;
         }
 
-        // GET: api/Pedidos
+        /// <summary>
+        /// Gets all orders with their details
+        /// </summary>
         [HttpGet]
         public async Task<ActionResult<IEnumerable<PedidoDTO>>> GetPedidos()
         {
-            var pedidos = await _context.Pedidos
-                .Include(p => p.Cliente)
-                .Include(p => p.Empleado)
-                .Include(p => p.Detalles)
-                .ThenInclude(d => d.Producto)
-                .ToListAsync();
-
-            var pedidosDTO = pedidos.Select(p => new PedidoDTO
+            try
             {
-                Id = p.Id,
-                FechaPedido = p.FechaPedido,
-                Estado = p.Estado,
-                ClienteId = p.ClienteId,
-                EmpleadoId = p.EmpleadoId != null ? p.EmpleadoId.ToString() : null,
-                Total = p.Total,
-                Detalles = p.Detalles.Select(d => new PedidoDetalleDTO
-                {
-                    Id = d.Id,
-                    ProductoId = d.ProductoId,
-                    Cantidad = d.Cantidad,
-                    PrecioUnitario = d.PrecioUnitario,
-                    Subtotal = d.Subtotal,
-                    Producto = new ProductoDTO
-                    {
-                        Id = d.Producto.Id,
-                        Nombre = d.Producto.Nombre,
-                        Precio = d.Producto.Precio,
-                        Tipo = d.Producto.Tipo.ToString()
-                    }
-                }).ToList()
-            });
-
-            return Ok(pedidosDTO);
+                var pedidos = await _pedidoService.GetAllPedidosAsync();
+                return Ok(pedidos);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error retrieving orders", error = ex.Message });
+            }
         }
 
-        // GET: api/Pedidos/5
+        /// <summary>
+        /// Gets a specific order by ID
+        /// </summary>
         [HttpGet("{id}")]
-        public async Task<ActionResult<Pedido>> GetPedido(string id)
+        public async Task<ActionResult<PedidoDTO>> GetPedido(string id)
         {
-            var pedido = await _context.Pedidos
-                .Include(p => p.Cliente)
-                .Include(p => p.Empleado)
-                .Include(p => p.Detalles)
-                .ThenInclude(d => d.Producto)
-                .FirstOrDefaultAsync(p => p.Id == id);
-
-            if (pedido == null)
-                return NotFound();
-
-            return Ok(pedido);
+            try
+            {
+                var pedido = await _pedidoService.GetPedidoByIdAsync(id);
+                if (pedido == null) 
+                    return NotFound(new { message = "Pedido no encontrado" });
+                
+                return Ok(pedido);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error retrieving order", error = ex.Message });
+            }
         }
 
-        // POST: api/Pedidos
+        /// <summary>
+        /// Gets orders by customer ID
+        /// </summary>
+        [HttpGet("cliente/{clienteId}")]
+        public async Task<ActionResult<IEnumerable<PedidoDTO>>> GetPedidosByCliente(string clienteId)
+        {
+            try
+            {
+                var pedidos = await _pedidoService.GetPedidosByClienteAsync(clienteId);
+                return Ok(pedidos);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error retrieving customer orders", error = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Gets orders by status
+        /// </summary>
+        [HttpGet("estado/{estado}")]
+        public async Task<ActionResult<IEnumerable<PedidoDTO>>> GetPedidosByEstado(EstadoPedido estado)
+        {
+            try
+            {
+                var pedidos = await _pedidoService.GetPedidosByEstadoAsync(estado);
+                return Ok(pedidos);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error retrieving orders by status", error = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Creates a new order
+        /// </summary>
         [HttpPost]
-        [AllowAnonymous]
-        public async Task<ActionResult<Pedido>> PostPedido(CrearPedidoDTO pedidoDto)
+        [AllowAnonymous] // Allow customers to create orders
+        public async Task<ActionResult<PedidoDTO>> CreatePedido([FromBody] CrearPedidoDTO pedidoDto)
         {
-            var pedido = new Pedido
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            try
             {
-                Id = Guid.NewGuid().ToString(),
-                FechaPedido = DateTime.Now,
-                Estado = pedidoDto.Estado,
-                ClienteId = pedidoDto.ClienteId,
-                EmpleadoId = string.IsNullOrWhiteSpace(pedidoDto.EmpleadoId) ? null : pedidoDto.EmpleadoId,
-                Total = 0
-            };
-
-            _context.Pedidos.Add(pedido);
-            await _context.SaveChangesAsync();
-
-            decimal total = 0;
-            foreach (var detalle in pedidoDto.Detalles)
-            {
-                var producto = await _context.Productos.FindAsync(detalle.ProductoId);
-                if (producto == null || !producto.Disponible)
-                    throw new InvalidOperationException("Producto no disponible");
-
-                var detallePedido = new PedidoDetalle
-                {
-                    Id = Guid.NewGuid().ToString(),
-                    PedidoId = pedido.Id,
-                    ProductoId = detalle.ProductoId,
-                    Cantidad = detalle.Cantidad, // int -> int
-                    PrecioUnitario = producto.Precio,
-                    Subtotal = producto.Precio * detalle.Cantidad
-                };
-
-                total += detallePedido.Subtotal;
-                _context.PedidoDetalles.Add(detallePedido);
+                var pedido = await _pedidoService.CreatePedidoAsync(pedidoDto);
+                return CreatedAtAction(nameof(GetPedido), new { id = pedido.Id }, pedido);
             }
-
-            pedido.Total = total;
-            await _context.SaveChangesAsync();
-
-            return CreatedAtAction(nameof(GetPedido), new { id = pedido.Id }, pedido);
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error creating order", error = ex.Message });
+            }
         }
 
-        // PUT: api/Pedidos/5
+        /// <summary>
+        /// Updates an existing order
+        /// </summary>
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutPedido(string id, CrearPedidoDTO pedidoDto)
+        public async Task<IActionResult> UpdatePedido(string id, [FromBody] CrearPedidoDTO pedidoDto)
         {
-            var pedido = await _context.Pedidos
-                .Include(p => p.Detalles)
-                .FirstOrDefaultAsync(p => p.Id == id);
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
 
-            if (pedido == null)
-                return NotFound();
-
-            if (pedido.Estado == "Cancelado" && pedidoDto.Estado == "Entregado")
-                return BadRequest("No se puede entregar un pedido cancelado.");
-
-            pedido.EmpleadoId = string.IsNullOrWhiteSpace(pedidoDto.EmpleadoId) ? null : pedidoDto.EmpleadoId;
-            pedido.Estado = pedidoDto.Estado;
-
-            if (pedidoDto.Estado == "Entregado" && pedido.FechaEntrega == null)
-                pedido.FechaEntrega = DateTime.Now;
-
-            _context.PedidoDetalles.RemoveRange(pedido.Detalles);
-            await _context.SaveChangesAsync();
-
-            decimal total = 0;
-            foreach (var detalle in pedidoDto.Detalles)
+            try
             {
-                var producto = await _context.Productos.FindAsync(detalle.ProductoId);
-                if (producto == null || !producto.Disponible)
-                    return BadRequest("Producto no disponible");
-
-                var detallePedido = new PedidoDetalle
-                {
-                    Id = Guid.NewGuid().ToString(),
-                    PedidoId = pedido.Id,
-                    ProductoId = detalle.ProductoId,
-                    Cantidad = detalle.Cantidad, // int -> int
-                    PrecioUnitario = producto.Precio,
-                    Subtotal = producto.Precio * detalle.Cantidad
-                };
-
-                total += detallePedido.Subtotal;
-                _context.PedidoDetalles.Add(detallePedido);
+                var result = await _pedidoService.UpdatePedidoAsync(id, pedidoDto);
+                if (!result) 
+                    return NotFound(new { message = "Pedido no encontrado" });
+                
+                return NoContent();
             }
-
-            pedido.Total = total;
-            await _context.SaveChangesAsync();
-
-            return NoContent();
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error updating order", error = ex.Message });
+            }
         }
 
-        // DELETE: api/Pedidos/5
+        /// <summary>
+        /// Updates only the order status
+        /// </summary>
+        [HttpPatch("{id}/estado")]
+        public async Task<IActionResult> UpdateEstadoPedido(string id, [FromBody] EstadoPedido estado)
+        {
+            try
+            {
+                var result = await _pedidoService.UpdateEstadoPedidoAsync(id, estado);
+                if (!result) 
+                    return NotFound(new { message = "Pedido no encontrado" });
+                
+                return NoContent();
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error updating order status", error = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Deletes an order (only if pending)
+        /// </summary>
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeletePedido(string id)
         {
-            var pedido = await _context.Pedidos
-                .Include(p => p.Detalles)
-                .FirstOrDefaultAsync(p => p.Id == id);
+            try
+            {
+                var result = await _pedidoService.DeletePedidoAsync(id);
+                if (!result) 
+                    return NotFound(new { message = "Pedido no encontrado" });
+                
+                return NoContent();
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error deleting order", error = ex.Message });
+            }
+        }
 
-            if (pedido == null)
-                return NotFound();
+        /// <summary>
+        /// Calculates total for order details without creating the order
+        /// </summary>
+        [HttpPost("calcular-total")]
+        [AllowAnonymous]
+        public async Task<ActionResult<decimal>> CalcularTotal([FromBody] List<CrearPedidoDetalleDTO> detalles)
+        {
+            try
+            {
+                var total = await _pedidoService.CalcularTotalPedidoAsync(detalles);
+                return Ok(new { total });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error calculating total", error = ex.Message });
+            }
+        }
 
-            _context.Pedidos.Remove(pedido);
-            await _context.SaveChangesAsync();
-
-            return NoContent();
+        /// <summary>
+        /// Validates product availability
+        /// </summary>
+        [HttpPost("validar-disponibilidad")]
+        [AllowAnonymous]
+        public async Task<ActionResult<bool>> ValidarDisponibilidad([FromBody] List<CrearPedidoDetalleDTO> detalles)
+        {
+            try
+            {
+                var disponible = await _pedidoService.ValidarDisponibilidadProductosAsync(detalles);
+                return Ok(new { disponible });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error validating availability", error = ex.Message });
+            }
         }
     }
 }
