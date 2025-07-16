@@ -13,7 +13,7 @@ namespace PizzaCoreAPI.DTOs
         public int? EmpleadoId { get; set; }
         public DateTime FechaCreacion { get; set; }
         public string? Notas { get; set; }
-
+        
         // Optional: Include terminal info for tracking sync source
         public string? TerminalId { get; set; }
     }
@@ -23,20 +23,5 @@ namespace PizzaCoreAPI.DTOs
         public List<SyncFacturaDTO> Facturas { get; set; } = new List<SyncFacturaDTO>();
         public string TerminalId { get; set; } = string.Empty;
         public DateTime SyncTimestamp { get; set; } = DateTime.UtcNow;
-    }
-
-    public class SyncFacturaResultDTO
-    {
-        public int TotalReceived { get; set; }
-        public int Synced { get; set; }
-        public int Updated { get; set; }
-        public int Failed { get; set; }
-        public List<SyncFacturaErrorDTO> Errors { get; set; } = new List<SyncFacturaErrorDTO>();
-    }
-
-    public class SyncFacturaErrorDTO
-    {
-        public int FacturaId { get; set; }
-        public string Error { get; set; } = string.Empty;
     }
 }

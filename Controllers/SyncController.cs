@@ -206,12 +206,11 @@ namespace PizzaCoreAPI.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Unexpected error in batch factura sync");
-                return StatusCode(500, new
-                {
-                    success = false,
-                    error = "Internal server error",
+                return StatusCode(500, new { 
+                    success = false, 
+                    error = "Internal server error", 
                     type = "server_error",
-                    details = ex.Message
+                    details = ex.Message 
                 });
             }
         }
@@ -235,22 +234,22 @@ namespace PizzaCoreAPI.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting pending facturas");
-                return StatusCode(500, new
-                {
-                    success = false,
-                    error = "Internal server error",
-                    type = "server_error"
+                return StatusCode(500, new { 
+                    success = false, 
+                    error = "Internal server error", 
+                    type = "server_error" 
                 });
             }
         }
 
+        // Add a status endpoint to check sync health
         [HttpGet("facturas/status")]
         public async Task<IActionResult> GetSyncStatus()
         {
             try
             {
                 var stats = await _facturaService.GetEstadisticasAsync(
-                    DateTime.UtcNow.AddDays(-30),
+                    DateTime.UtcNow.AddDays(-30), 
                     DateTime.UtcNow
                 );
 
@@ -266,25 +265,14 @@ namespace PizzaCoreAPI.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting sync status");
-                return StatusCode(500, new
-                {
-                    success = false,
-                    error = "Internal server error",
-                    type = "server_error"
+                return StatusCode(500, new { 
+                    success = false, 
+                    error = "Internal server error", 
+                    type = "server_error" 
                 });
             }
         }
 
-        private MetodoPago ConvertMetodoPago(string metodoPago)
-        {
-            return metodoPago?.ToLower() switch
-            {
-                "efectivo" => MetodoPago.Efectivo,
-                "tarjeta" => MetodoPago.Tarjeta,
-                "transferencia" => MetodoPago.Transferencia,
-                _ => MetodoPago.Efectivo
-            };
-        }
     }
 
     // DTOs for synchronization

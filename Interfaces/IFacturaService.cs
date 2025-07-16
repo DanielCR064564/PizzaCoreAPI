@@ -118,4 +118,19 @@ namespace PizzaCoreAPI.Services
         public decimal MontoPromedioDiario { get; set; }
         public decimal TasaCobranza { get; set; } // Percentage of paid invoices
     }
+
+    public class SyncFacturaResultDTO
+    {
+        public int TotalReceived { get; set; }
+        public int Synced { get; set; }
+        public int Updated { get; set; }
+        public int Failed { get; set; }
+        public List<SyncFacturaErrorDTO> Errors { get; set; } = new List<SyncFacturaErrorDTO>();
+    }
+
+    public class SyncFacturaErrorDTO
+    {
+        public int FacturaId { get; set; }
+        public string Error { get; set; } = string.Empty;
+    }
 }

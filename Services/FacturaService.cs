@@ -295,29 +295,18 @@ namespace PizzaCoreAPI.Services
 
                 if (existingFactura != null)
                 {
-                    // Map delivery types to match database enum values
-                    string tipoEntregaDb = syncDto.TipoEntrega switch
-                    {
-                        "Delivery" => "Domicilio",
-                        "Para Llevar" => "Para_Llevar",
-                        "Local" => "Local",
-                        _ => "Local" // Default fallback
-                    };
-
                     // Update existing factura if needed
                     bool hasChanges = false;
 
                     if (existingFactura.Total != syncDto.Total ||
                         existingFactura.Estado != syncDto.Estado ||
-                        existingFactura.FechaFactura != syncDto.FechaFactura ||
-                        existingFactura.TipoEntrega != tipoEntregaDb)
+                        existingFactura.FechaFactura != syncDto.FechaFactura)
                     {
                         existingFactura.Total = syncDto.Total;
                         existingFactura.Subtotal = syncDto.Subtotal;
                         existingFactura.IVA = syncDto.IVA;
                         existingFactura.Estado = syncDto.Estado;
                         existingFactura.FechaFactura = syncDto.FechaFactura;
-                        existingFactura.TipoEntrega = tipoEntregaDb;
                         existingFactura.Notas = syncDto.Notas;
                         existingFactura.SyncCompletado = true;
                         existingFactura.SyncUltimoIntento = DateTime.UtcNow;
@@ -334,14 +323,8 @@ namespace PizzaCoreAPI.Services
                 }
                 else
                 {
-                    // Map delivery types to match database enum values
-                    string tipoEntregaDb = syncDto.TipoEntrega switch
-                    {
-                        "Delivery" => "Domicilio",
-                        "Para Llevar" => "Para_Llevar",
-                        "Local" => "Local",
-                        _ => "Local" // Default fallback
-                    };
+                    // Validate foreign key references before creating
+                    await ValidateForeignKeyReferences(syncDto);
 
                     // Create new factura
                     var newFactura = new Factura
@@ -349,7 +332,7 @@ namespace PizzaCoreAPI.Services
                         Id = syncDto.IdFactura, // Use the ID from POS
                         FechaFactura = syncDto.FechaFactura,
                         FkCliente = syncDto.FkCliente,
-                        TipoEntrega = tipoEntregaDb,
+                        TipoEntrega = syncDto.TipoEntrega,
                         Subtotal = syncDto.Subtotal,
                         IVA = syncDto.IVA,
                         Total = syncDto.Total,
@@ -373,6 +356,67 @@ namespace PizzaCoreAPI.Services
             {
                 // Log the error
                 throw new InvalidOperationException($"Error syncing factura {syncDto.IdFactura}: {ex.Message}", ex);
+            }
+        }
+
+        private async Task ValidateForeignKeyReferences(SyncFacturaDTO syncDto)
+        {
+            // Check if client exists in the cliente table using raw SQL
+            using var connection = new MySqlConnection(_context.Database.GetConnectionString());
+            await connection.OpenAsync();
+
+            // Check if client exists (correct column name is idCliente)
+            using var clientCommand = new MySqlCommand("SELECT COUNT(*) FROM cliente WHERE idCliente = @clientId", connection);
+            clientCommand.Parameters.AddWithValue("@clientId", syncDto.FkCliente);
+            var clientExists = Convert.ToInt32(await clientCommand.ExecuteScalarAsync()) > 0;
+
+            if (!clientExists)
+            {
+                // Create a default client for sync purposes (correct column names)
+                using var insertClientCommand = new MySqlCommand(@"
+                    INSERT INTO cliente (idCliente, nombres, apPaterno, apMaterno, email, telefono, direccion, fechaRegistro, activo)
+                    VALUES (@id, @nombres, @apPaterno, @apMaterno, @email, @telefono, @direccion, @fechaRegistro, @activo)", connection);
+
+                insertClientCommand.Parameters.AddWithValue("@id", syncDto.FkCliente);
+                insertClientCommand.Parameters.AddWithValue("@nombres", "Cliente");
+                insertClientCommand.Parameters.AddWithValue("@apPaterno", "General");
+                insertClientCommand.Parameters.AddWithValue("@apMaterno", "Sync");
+                insertClientCommand.Parameters.AddWithValue("@email", $"cliente{syncDto.FkCliente}@sync.com");
+                insertClientCommand.Parameters.AddWithValue("@telefono", "N/A");
+                insertClientCommand.Parameters.AddWithValue("@direccion", "N/A");
+                insertClientCommand.Parameters.AddWithValue("@fechaRegistro", DateTime.UtcNow);
+                insertClientCommand.Parameters.AddWithValue("@activo", true);
+
+                await insertClientCommand.ExecuteNonQueryAsync();
+            }
+
+            // Check if employee exists if provided
+            if (syncDto.EmpleadoId.HasValue)
+            {
+                using var employeeCommand = new MySqlCommand("SELECT COUNT(*) FROM empleado WHERE idempleado = @empleadoId", connection);
+                employeeCommand.Parameters.AddWithValue("@empleadoId", syncDto.EmpleadoId.Value);
+                var employeeExists = Convert.ToInt32(await employeeCommand.ExecuteScalarAsync()) > 0;
+
+                if (!employeeExists)
+                {
+                    // Create a default employee for sync purposes (correct column names)
+                    using var insertEmployeeCommand = new MySqlCommand(@"
+                        INSERT INTO empleado (idempleado, nombre, apellido, usuario, password, rol, activo, fechaIngreso, telefono, email)
+                        VALUES (@id, @nombre, @apellido, @usuario, @password, @rol, @activo, @fechaIngreso, @telefono, @email)", connection);
+
+                    insertEmployeeCommand.Parameters.AddWithValue("@id", syncDto.EmpleadoId.Value);
+                    insertEmployeeCommand.Parameters.AddWithValue("@nombre", "Empleado");
+                    insertEmployeeCommand.Parameters.AddWithValue("@apellido", "Sistema");
+                    insertEmployeeCommand.Parameters.AddWithValue("@usuario", $"emp{syncDto.EmpleadoId.Value}");
+                    insertEmployeeCommand.Parameters.AddWithValue("@password", "default123"); // Default password
+                    insertEmployeeCommand.Parameters.AddWithValue("@rol", "Cajero");
+                    insertEmployeeCommand.Parameters.AddWithValue("@activo", true);
+                    insertEmployeeCommand.Parameters.AddWithValue("@fechaIngreso", DateTime.UtcNow);
+                    insertEmployeeCommand.Parameters.AddWithValue("@telefono", "N/A");
+                    insertEmployeeCommand.Parameters.AddWithValue("@email", $"empleado{syncDto.EmpleadoId.Value}@sync.com");
+
+                    await insertEmployeeCommand.ExecuteNonQueryAsync();
+                }
             }
         }
 
@@ -425,7 +469,7 @@ namespace PizzaCoreAPI.Services
             if (lastSyncDate.HasValue)
             {
                 query = query.Where(f => f.FechaCreacion > lastSyncDate.Value ||
-                                         (f.SyncUltimoIntento.HasValue && f.SyncUltimoIntento > lastSyncDate.Value));
+                                        (f.SyncUltimoIntento.HasValue && f.SyncUltimoIntento > lastSyncDate.Value));
             }
 
             var facturas = await query
