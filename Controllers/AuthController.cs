@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.AspNetCore.Authorization;
 using PizzaCoreAPI.Models;
 using PizzaCoreAPI.DTOs;
 using System.IdentityModel.Tokens.Jwt;
@@ -95,6 +96,70 @@ namespace PizzaCoreAPI.Controllers
             var token = await GenerateJwtToken(user);
 
             return Ok(new { message = "Login exitoso", token });
+        }
+
+        [HttpPost("Logout")]
+        public async Task<IActionResult> Logout()
+        {
+            try
+            {
+                // Get current user ID from the JWT token claims
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return BadRequest(new { message = "Usuario no encontrado en el token" });
+                }
+
+                // Get user for logging purposes
+                var user = await _userManager.FindByIdAsync(userId);
+                if (user != null)
+                {
+                    // Update last activity (optional)
+                    // You could add a LastLogoutDate field to your Usuario model
+                    // user.LastLogoutDate = DateTime.UtcNow;
+                    // await _userManager.UpdateAsync(user);
+
+                    // Log the logout event (optional - you could use ILogger here)
+                    Console.WriteLine($"Usuario {user.UserName} ({user.Email}) cerró sesión en {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss}");
+                }
+
+                // Sign out from Identity (clears server-side authentication state)
+                await _signInManager.SignOutAsync();
+
+                // Note: With JWT tokens, the actual token invalidation happens client-side
+                // For enhanced security, you could implement a token blacklist service here
+                // await _tokenBlacklistService.BlacklistTokenAsync(GetTokenFromHeader());
+
+                return Ok(new
+                {
+                    message = "Sesión cerrada exitosamente",
+                    timestamp = DateTime.UtcNow,
+                    userId = userId
+                });
+            }
+            catch (Exception ex)
+            {
+                // Log the error (use proper logging in production)
+                Console.WriteLine($"Error durante logout: {ex.Message}");
+
+                return StatusCode(500, new
+                {
+                    message = "Error interno del servidor durante el cierre de sesión",
+                    error = ex.Message
+                });
+            }
+        }
+
+        // Helper method to extract token from Authorization header (optional)
+        private string? GetTokenFromHeader()
+        {
+            var authHeader = Request.Headers.Authorization.FirstOrDefault();
+            if (authHeader != null && authHeader.StartsWith("Bearer "))
+            {
+                return authHeader.Substring(7); // Remove "Bearer " prefix
+            }
+            return null;
         }
 
         // Método mejorado para generar el token

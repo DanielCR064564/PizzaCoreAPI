@@ -65,6 +65,158 @@ namespace PizzaCoreAPI.Controllers
             }
         }
 
+        [HttpGet("productos/disponibles")]
+        public async Task<IActionResult> GetAvailableProductos()
+        {
+            try
+            {
+                var productos = await _productoSyncService.GetAllProductosForSyncAsync();
+                var disponibles = productos.Where(p => p.Disponible).ToList();
+                
+                _logger.LogInformation($"Returning {disponibles.Count} available products");
+                return Ok(disponibles);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting available products for sync");
+                return StatusCode(500, new { error = "Error retrieving available products" });
+            }
+        }
+
+        [HttpGet("productos/tipo/{tipo}")]
+        public async Task<IActionResult> GetProductosByTipo(string tipo)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(tipo))
+                {
+                    return BadRequest(new { error = "Tipo de producto requerido" });
+                }
+
+                var productos = await _productoSyncService.GetAllProductosForSyncAsync();
+                var productosPorTipo = productos.Where(p => 
+                    p.Tipo.Equals(tipo, StringComparison.OrdinalIgnoreCase) && p.Disponible
+                ).ToList();
+                
+                _logger.LogInformation($"Returning {productosPorTipo.Count} products of type '{tipo}'");
+                return Ok(productosPorTipo);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting products by type: {Tipo}", tipo);
+                return StatusCode(500, new { error = $"Error retrieving products of type {tipo}" });
+            }
+        }
+
+        [HttpGet("productos/{id}")]
+        public async Task<IActionResult> GetProductoById(string id)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(id))
+                {
+                    return BadRequest(new { error = "ID de producto requerido" });
+                }
+
+                var productos = await _productoSyncService.GetAllProductosForSyncAsync();
+                var producto = productos.FirstOrDefault(p => p.Id.Equals(id, StringComparison.OrdinalIgnoreCase));
+                
+                if (producto == null)
+                {
+                    return NotFound(new { error = $"Producto con ID {id} no encontrado" });
+                }
+                
+                _logger.LogInformation($"Returning product: {producto.Nombre}");
+                return Ok(producto);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting product by ID: {ProductId}", id);
+                return StatusCode(500, new { error = $"Error retrieving product {id}" });
+            }
+        }
+
+        [HttpGet("productos/tipos")]
+        public async Task<IActionResult> GetProductTypes()
+        {
+            try
+            {
+                var productos = await _productoSyncService.GetAllProductosForSyncAsync();
+                var tipos = productos
+                    .Where(p => !string.IsNullOrWhiteSpace(p.Tipo))
+                    .Select(p => p.Tipo)
+                    .Distinct()
+                    .OrderBy(t => t)
+                    .ToList();
+                
+                _logger.LogInformation($"Returning {tipos.Count} product types");
+                return Ok(new { tipos = tipos });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting product types");
+                return StatusCode(500, new { error = "Error retrieving product types" });
+            }
+        }
+
+        [HttpGet("productos/stats")]
+        public async Task<IActionResult> GetProductStats()
+        {
+            try
+            {
+                var productos = await _productoSyncService.GetAllProductosForSyncAsync();
+                
+                var stats = new
+                {
+                    total = productos.Count(),
+                    disponibles = productos.Count(p => p.Disponible),
+                    noDisponibles = productos.Count(p => !p.Disponible),
+                    porTipo = productos.GroupBy(p => p.Tipo)
+                        .ToDictionary(g => g.Key, g => new {
+                            total = g.Count(),
+                            disponibles = g.Count(p => p.Disponible)
+                        }),
+                    ultimaActualizacion = productos.Max(p => p.FechaActualizacion)
+                };
+                
+                _logger.LogInformation("Returning product statistics");
+                return Ok(stats);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting product statistics");
+                return StatusCode(500, new { error = "Error retrieving product statistics" });
+            }
+        }
+
+        // Search products by name or description
+        [HttpGet("productos/buscar")]
+        public async Task<IActionResult> SearchProductos([FromQuery] string query)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(query))
+                {
+                    return BadRequest(new { error = "Query de búsqueda requerido" });
+                }
+
+                var productos = await _productoSyncService.GetAllProductosForSyncAsync();
+                var resultados = productos.Where(p => 
+                    (p.Nombre.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+                    p.Descripcion.Contains(query, StringComparison.OrdinalIgnoreCase)) &&
+                    p.Disponible
+                ).ToList();
+                
+                _logger.LogInformation($"Search '{query}' returned {resultados.Count} results");
+                return Ok(resultados);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error searching products with query: {Query}", query);
+                return StatusCode(500, new { error = "Error en la búsqueda de productos" });
+            }
+        }
+
         [HttpPost("ventas")]
         public async Task<IActionResult> ReceiveVenta([FromBody] SyncVentaDTO venta)
         {
